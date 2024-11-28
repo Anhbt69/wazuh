@@ -1,0 +1,29 @@
+---
+- name: Xử lý và lưu trữ cảnh báo Wazuh mức độ cao
+  hosts: 192.168.10.187
+  become: yes
+  become_method: sudo
+  become_exe: /usr/bin/sudo
+  vars:
+    alert_level_threshold: 12
+    wazuh_alerts_file: "/var/ossec/logs/alerts/alerts.json"
+    awx_storage_path: "/var/lib/awx/projects/wazuh_alerts"
+    retention_days: 30
+
+  tasks:
+    - name: Đọc file cảnh báo Wazuh
+      shell: "tail -n 1000 {{ wazuh_alerts_file }} | jq -c 'select(.rule.level >= {{ alert_level_threshold }})'"
+      register: high_level_alerts
+
+    - name: Xử lý cảnh báo
+      debug:
+        msg: "Cảnh báo mức độ cao: {{ item.rule.description }} - Level: {{ item.rule.level }}"
+      loop: "{{ high_level_alerts.stdout_lines | map('from_json') | list }}"
+
+
+    - name: Ghi log hoạt động
+      delegate_to: localhost
+      lineinfile:
+        path: "{{ awx_storage_path }}/alert_processing.log"
+        line: "{{ ansible_date_time.iso8601 }} - Processed {{ high_level_alerts.stdout_lines | length }} high-level alerts"
+        create: yes
