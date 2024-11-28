@@ -1,6 +1,13 @@
+---
 - name: Test connection to Wazuh manager
   hosts: all
   become: no
   tasks:
     - name: Ping Wazuh manager
       ping:
+      register: ping_result
+      ignore_errors: yes
+
+    - name: Output connection status
+      debug:
+        msg: "{{ 'YES' if ping_result.ping == 'pong' else 'NO' }}"
