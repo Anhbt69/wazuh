@@ -10,4 +10,4 @@
 
     - name: Output connection status
       debug:
-        msg: "{{ 'NO' if ping_result.ping == 'pong' else 'YES' }}"
+        msg: "{{ 'YES' if ping_result.ping == 'pong' else 'NO' }}"
