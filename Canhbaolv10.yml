@@ -1,0 +1,17 @@
+---
+- name: Xử lý cảnh báo Wazuh mức độ cao qua SSH
+  hosts: 192.168.10.187
+  become: yes
+  vars:
+    alert_level_threshold: 10
+    wazuh_alerts_file: "/var/ossec/logs/alerts/alerts.json"
+
+  tasks:
+    - name: Đọc file cảnh báo Wazuh
+      shell: "tail -n 1000 {{ wazuh_alerts_file }} | jq -c 'select(.rule.level >= {{ alert_level_threshold }})'"
+      register: high_level_alerts
+
+    - name: Xử lý cảnh báo
+      debug:
+        msg: "Cảnh báo mức độ cao: {{ item.rule.description }} - Level: {{ item.rule.level }}"
+      loop: "{{ high_level_alerts.stdout_lines | map('from_json') | list }}"
