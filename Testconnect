@@ -1,0 +1,6 @@
+- name: Test connection to Wazuh manager
+  hosts: all
+  become: no
+  tasks:
+    - name: Ping Wazuh manager
+      ping:
