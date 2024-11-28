@@ -1,0 +1,38 @@
+---
+- name: Update and Backup Wazuh
+  hosts: 192.168.10.187
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Ensure Wazuh is updated to the latest version
+      apt:
+        name: wazuh-manager
+        state: latest
+      register: update_result
+
+    - name: Notify if Wazuh was updated
+      debug:
+        msg: "Wazuh has been updated to the latest version."
+      when: update_result.changed
+
+    - name: Create backup of Wazuh
+      command: /var/ossec/bin/backup
+      register: backup_result
+
+    - name: Notify if backup was successful
+      debug:
+        msg: "Backup created successfully at {{ backup_result.stdout }}"
+      when: backup_result.rc == 0
+
+    - name: Copy the backup to a secure location
+      copy:
+        src: /var/ossec/backup/
+        dest: /path/
+        remote_src: yes
+      when: backup_result.rc == 0
+      register: copy_result
+
+    - name: Notify if backup was copied successfully
+      debug:
+        msg: "Backup copied successfully to /path/to/your/backup/location/"
+      when: copy_result.changed
