@@ -1,6 +1,6 @@
 ---
 - name: Clear Old Wazuh Alerts
-  hosts: wazuh_server
+  hosts: all
   become: yes
   tasks:
     - name: Remove old alerts (older than 7 days)
