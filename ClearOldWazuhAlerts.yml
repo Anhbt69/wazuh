@@ -3,13 +3,19 @@
   hosts: wazuh_server
   become: yes
   tasks:
-    - name: Remove old alerts (older than 1 days)
+    - name: Remove old alerts (older than 7 days)
       find:
         paths: "/var/ossec/logs/alerts/"
-        age: "1d"
-        state: absent  
+        age: "7d"
+        state: absent
       register: files_removed
 
-    - name: Show files removed
+    - name: Show success or failure message
       debug:
-        var: files_removed
+        msg: "Success"
+      when: files_removed.matched > 0
+
+    - name: Show failure message
+      debug:
+        msg: "Failed"
+      when: files_removed.matched == 0
