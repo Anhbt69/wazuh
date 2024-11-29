@@ -1,21 +1,20 @@
 ---
-- name: Clear Old Wazuh Alerts
+- name: Delete August
   hosts: all
   become: yes
   tasks:
-    - name: Remove old alerts (older than 1 days)
-      find:
-        paths: "/var/ossec/logs/alerts/"
-        age: "1d"
+    - name: Delete August
+      file:
+        path: "/var/ossec/logs/alerts/Aug/"
         state: absent
-      register: files_removed
+      register: deleted_file
 
-    - name: Show success or failure message
+    - name: Show success message if file was deleted
       debug:
         msg: "Success"
-      when: files_removed.matched > 0
+      when: deleted_file is not failed
 
-    - name: Show failure message
+    - name: Show failure message if file was not deleted
       debug:
         msg: "Failed"
-      when: files_removed.matched == 0
+      when: deleted_file is failed
