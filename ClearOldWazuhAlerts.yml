@@ -1,0 +1,15 @@
+---
+- name: Clear Old Wazuh Alerts
+  hosts: wazuh_server
+  become: yes
+  tasks:
+    - name: Remove old alerts (older than 1 days)
+      find:
+        paths: "/var/ossec/logs/alerts/"
+        age: "1d"
+        state: absent  
+      register: files_removed
+
+    - name: Show files removed
+      debug:
+        var: files_removed
