@@ -5,7 +5,7 @@
   tasks:
     - name: Delete August
       file:
-        path: "/var/ossec/logs/alerts/Aug/"
+        path: "/var/ossec/logs/alerts/2024/Aug/"
         state: absent
       register: deleted_file
 
