@@ -3,10 +3,10 @@
   hosts: all
   become: yes
   tasks:
-    - name: Remove old alerts (older than 7 days)
+    - name: Remove old alerts (older than 1 days)
       find:
         paths: "/var/ossec/logs/alerts/"
-        age: "7d"
+        age: "1d"
         state: absent
       register: files_removed
 
