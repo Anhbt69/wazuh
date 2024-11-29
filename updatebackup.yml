@@ -16,7 +16,7 @@
       when: update_result.changed
 
     - name: Create backup of Wazuh
-      command: /var/ossec/bin/backup
+      command: /var/ossec/backup
       register: backup_result
 
     - name: Notify if backup was successful
@@ -27,7 +27,7 @@
     - name: Copy the backup to a secure location
       copy:
         src: /var/ossec/backup/
-        dest: /path/
+        dest: /home/wazuh/backup
         remote_src: yes
       when: backup_result.rc == 0
       register: copy_result
