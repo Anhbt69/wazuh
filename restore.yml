@@ -1,0 +1,40 @@
+---
+- name: Restore Wazuh Server Configuration
+  hosts: wazuh-server
+  become: yes
+  tasks:
+    # Step 1: Define the backup directory and backup file to restore
+    - name: Define the backup directory and backup file to restore
+      set_fact:
+        backup_dir: "/var/backups/wazuh_config"
+        backup_file: "{{ backup_dir }}/wazuh_config_{{ restore_timestamp }}.tar.gz"
+
+    # Step 2: Check if the backup file exists
+    - name: Check if the backup file exists
+      stat:
+        path: "{{ backup_file }}"
+      register: backup_file_check
+
+    # Step 3: Abort if backup file does not exist
+    - name: Abort if backup file does not exist
+      fail:
+        msg: "The specified backup file does not exist, cannot proceed with restore!"
+      when: backup_file_check.stat.exists == false
+
+    # Step 4: Extract the backup file to restore Wazuh configuration
+    - name: Extract the backup file to restore configuration
+      command: "tar -xzf {{ backup_file }} -C /var/ossec"
+      register: restore_result
+      failed_when: restore_result.rc != 0
+
+    # Step 5: Verify the restore was successful
+    - name: Verify restore was successful
+      debug:
+        msg: "Wazuh configuration restored successfully from {{ backup_file }}"
+      when: restore_result.rc == 0
+
+    # Step 6: Log failure if restore failed
+    - name: Log failure if restore failed
+      debug:
+        msg: "Restore failed with error: {{ restore_result.stderr }}"
+      when: restore_result.rc != 0
