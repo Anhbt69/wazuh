@@ -3,12 +3,10 @@
   hosts: all
   become: yes
   tasks:
-    # Step 1: Hiển thị nội dung log Wazuh
     - name: Show recent Wazuh log entries
       command: tail -n 20 /var/ossec/logs/ossec.log
       register: wazuh_log_output
 
-    # Step 2: Hiển thị các log của Wazuh
     - name: Display Wazuh log output
       debug:
         msg: "{{ wazuh_log_output.stdout }}"
