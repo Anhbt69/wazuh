@@ -3,15 +3,14 @@
   hosts: all
   become: yes
   tasks:
-    # Kiểm tra trạng thái của dịch vụ Wazuh Manager
+    
     - name: Check the status of Wazuh Manager service
       systemd:
         name: wazuh-manager
         state: started
       register: wazuh_status
-      failed_when: false  # Không làm thất bại nếu dịch vụ không chạy
+      failed_when: false  
 
-    # Hiển thị thông báo "Wazuh on" nếu dịch vụ đang chạy
     - name: Display Wazuh on message
       debug:
         msg: "Wazuh on"
