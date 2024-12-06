@@ -1,6 +1,6 @@
 ---
 - name: Wazuh Service Management
-  hosts: wazuh-server
+  hosts: all
   become: yes
   tasks:
     # Step 1: Kiểm tra trạng thái của dịch vụ Wazuh Manager
