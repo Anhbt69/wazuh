@@ -1,6 +1,6 @@
 ---
 - name: Manage Wazuh Service
-  hosts: wazuh-server
+  hosts: all
   become: yes
   tasks:
     # Step 1: Khởi động lại dịch vụ Wazuh Manager
