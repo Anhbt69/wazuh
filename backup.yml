@@ -3,36 +3,31 @@
   hosts: all
   become: yes
   tasks:
-    # Step 1: Define the backup directory
+   
     - name: Define the backup directory
       set_fact:
         backup_dir: "/var/backups/wazuh_config"
 
-    # Step 2: Ensure the backup directory exists
     - name: Ensure the backup directory exists
       file:
         path: "{{ backup_dir }}"
         state: directory
         mode: '0755'
 
-    # Step 3: Create a timestamp for backup
     - name: Create timestamp for backup
       set_fact:
         timestamp: "{{ ansible_date_time.iso8601_basic }}"
 
-    # Step 4: Backup the Wazuh configuration files
     - name: Backup Wazuh configuration files
       command: "tar -czf {{ backup_dir }}/wazuh_config_{{ timestamp }}.tar.gz /var/ossec/etc"
       register: backup_result
       failed_when: backup_result.rc != 0
 
-    # Step 5: Verify the backup was successful
     - name: Verify backup was successful
       debug:
         msg: "Wazuh configuration backed up successfully at {{ backup_dir }}/wazuh_config_{{ timestamp }}.tar.gz"
       when: backup_result.rc == 0
-
-    # Step 6: Log failure if backup failed
+      
     - name: Log failure if backup failed
       debug:
         msg: "Backup failed with error: {{ backup_result.stderr }}"
