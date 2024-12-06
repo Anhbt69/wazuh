@@ -1,0 +1,18 @@
+---
+- name: Wazuh Service Management
+  hosts: wazuh-server
+  become: yes
+  tasks:
+    # Step 1: Kiểm tra trạng thái của dịch vụ Wazuh Manager
+    - name: Check the status of Wazuh Manager service
+      systemd:
+        name: wazuh-manager
+        state: started
+      register: wazuh_status
+      failed_when: false  # Không làm thất bại nếu dịch vụ không chạy
+
+    # Step 2: Hiển thị trạng thái dịch vụ
+    - name: Display Wazuh service status
+      debug:
+        msg: "Wazuh Manager service is {{ wazuh_status.state }} and is {{ wazuh_status.status.ActiveState }}"
+      when: wazuh_status.state is defined
