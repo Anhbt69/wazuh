@@ -1,6 +1,6 @@
 ---
 - name: Restore Wazuh Server Configuration
-  hosts: wazuh-server
+  hosts: all
   become: yes
   tasks:
     # Step 1: Define the backup directory and backup file to restore
