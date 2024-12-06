@@ -1,6 +1,6 @@
 ---
 - name: Wazuh Log Monitoring
-  hosts: wazuh-server
+  hosts: all
   become: yes
   tasks:
     # Step 1: Hiển thị nội dung log Wazuh
