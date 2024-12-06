@@ -16,9 +16,3 @@
       debug:
         msg: "Wazuh on"
       when: wazuh_status.status.ActiveState == 'active' and wazuh_status.status.SubState == 'running'
-
-    # Hiển thị thông báo "Wazuh off" nếu dịch vụ không chạy
-    - name: Display Wazuh off message
-      debug:
-        msg: "Wazuh off"
-      when: wazuh_status.status.ActiveState != 'active' or wazuh_status.status.SubState != 'running'
