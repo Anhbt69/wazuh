@@ -2,38 +2,53 @@
 - name: Restore Wazuh Server Configuration
   hosts: all
   become: yes
-  tasks:
-    # Step 1: Define the backup directory and backup file to restore
-    - name: Define the backup directory and backup file to restore
-      set_fact:
-        backup_dir: "/var/backups/wazuh_config"
-        backup_file: "{{ backup_dir }}/wazuh_config_{{ restore_timestamp }}.tar.gz"
+  vars:
+    # Định nghĩa thư mục sao lưu và tệp sao lưu cần khôi phục
+    backup_dir: "/var/backups/wazuh_config"
+    # Giả sử bạn biết timestamp của bản sao lưu cần khôi phục
+    restore_timestamp: "20241206T084117755452"  # Thay thế với timestamp bạn muốn
+    backup_file: "{{ backup_dir }}/wazuh_config_{{ restore_timestamp }}.tar.gz"
 
-    # Step 2: Check if the backup file exists
+  tasks:
+    # Step 1: Kiểm tra xem tệp sao lưu có tồn tại không
     - name: Check if the backup file exists
       stat:
         path: "{{ backup_file }}"
       register: backup_file_check
 
-    # Step 3: Abort if backup file does not exist
+    # Step 2: Nếu tệp sao lưu không tồn tại, dừng lại và báo lỗi
     - name: Abort if backup file does not exist
       fail:
-        msg: "The specified backup file does not exist, cannot proceed with restore!"
+        msg: "The specified backup file does not exist: {{ backup_file }}. Cannot proceed with restore!"
       when: backup_file_check.stat.exists == false
 
-    # Step 4: Extract the backup file to restore Wazuh configuration
+    # Step 3: Kiểm tra xem thư mục đích có tồn tại không
+    - name: Ensure /var/ossec exists and is writable
+      file:
+        path: "/var/ossec"
+        state: directory
+        mode: '0755'
+      register: ossec_directory_check
+
+    # Step 4: Nếu thư mục đích không tồn tại hoặc không có quyền ghi, báo lỗi
+    - name: Abort if /var/ossec directory is not accessible or writable
+      fail:
+        msg: "/var/ossec directory does not exist or is not writable. Cannot restore configuration!"
+      when: ossec_directory_check.failed == true
+
+    # Step 5: Giải nén bản sao lưu để khôi phục cấu hình vào thư mục Wazuh
     - name: Extract the backup file to restore configuration
       command: "tar -xzf {{ backup_file }} -C /var/ossec"
       register: restore_result
       failed_when: restore_result.rc != 0
 
-    # Step 5: Verify the restore was successful
+    # Step 6: Xác minh việc khôi phục thành công
     - name: Verify restore was successful
       debug:
         msg: "Wazuh configuration restored successfully from {{ backup_file }}"
       when: restore_result.rc == 0
 
-    # Step 6: Log failure if restore failed
+    # Step 7: Ghi lại lỗi nếu khôi phục thất bại
     - name: Log failure if restore failed
       debug:
         msg: "Restore failed with error: {{ restore_result.stderr }}"
