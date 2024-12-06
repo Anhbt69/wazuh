@@ -3,27 +3,23 @@
   hosts: all
   become: yes
   tasks:
-    # Step 1: Khởi động lại dịch vụ Wazuh Manager
     - name: Restart Wazuh Manager service
       systemd:
         name: wazuh-manager
         state: restarted
       register: restart_result
-
-    # Step 2: Hiển thị thông báo về kết quả khởi động lại dịch vụ
+      
     - name: Display restart result
       debug:
         msg: "Wazuh Manager service has been restarted successfully"
       when: restart_result.changed
 
-    # Step 3: Kiểm tra trạng thái dịch vụ sau khi khởi động lại
     - name: Verify Wazuh Manager service status after restart
       systemd:
         name: wazuh-manager
         state: started
       register: after_restart_status
 
-    # Step 4: Hiển thị trạng thái dịch vụ sau khi khởi động lại
     - name: Display Wazuh service status after restart
       debug:
         msg: "Wazuh Manager service status after restart: {{ after_restart_status.state }}"
