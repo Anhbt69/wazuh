@@ -1,6 +1,6 @@
 ---
 - name: Backup Wazuh Server Configuration
-  hosts: wazuh-server
+  hosts: all
   become: yes
   tasks:
     # Step 1: Define the backup directory
