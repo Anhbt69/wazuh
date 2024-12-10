@@ -1,13 +1,38 @@
 ---
-- name: Update Wazuh Server
+- name: Update Wazuh Server and Agents
   hosts: all
   become: yes
   vars:
+    wazuh_repo_url: "https://packages.wazuh.com/4.x/"
     wazuh_packages:
       - wazuh-manager
+      - wazuh-agent
 
   tasks:
-    # Cập nhật gói Wazuh
+    # Đảm bảo kho Wazuh được cấu hình
+    - name: Add Wazuh repository for Debian/Ubuntu
+      apt_repository:
+        repo: "deb {{ wazuh_repo_url }}apt stable main"
+        state: present
+        filename: wazuh
+      when: ansible_os_family == "Debian"
+
+    - name: Add Wazuh repository for CentOS/RHEL
+      yum_repository:
+        name: wazuh
+        description: Wazuh repository
+        baseurl: "{{ wazuh_repo_url }}yum/"
+        gpgcheck: yes
+        gpgkey: "{{ wazuh_repo_url }}yum/RPM-GPG-KEY-WAZUH"
+      when: ansible_os_family == "RedHat"
+
+    # Cập nhật danh sách gói trên Debian/Ubuntu
+    - name: Update apt cache (Debian/Ubuntu)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    # Cập nhật Wazuh Server và Agent
     - name: Update Wazuh packages
       package:
         name: "{{ wazuh_packages }}"
@@ -15,8 +40,24 @@
 
     # Kiểm tra phiên bản sau khi cập nhật
     - name: Check Wazuh Manager version
-      command: /var/ossec/bin/wazuh-manager -v
-      register: wazuh_version
+      command: "/var/ossec/bin/wazuh-control -v"
+      register: manager_version
+      ignore_errors: yes
+      when: "'wazuh-manager' in wazuh_packages"
 
-    - debug:
-        msg: "Updated Wazuh Manager Version: {{ wazuh_version.stdout }}"
+    - name: Check Wazuh Agent version
+      command: "/var/ossec/bin/wazuh-agentd -v"
+      register: agent_version
+      ignore_errors: yes
+      when: "'wazuh-agent' in wazuh_packages"
+
+    # Hiển thị kết quả cập nhật
+    - name: Display Wazuh Manager version
+      debug:
+        msg: "Wazuh Manager updated to version: {{ manager_version.stdout }}"
+      when: manager_version is defined
+
+    - name: Display Wazuh Agent version
+      debug:
+        msg: "Wazuh Agent updated to version: {{ agent_version.stdout }}"
+      when: agent_version is defined
