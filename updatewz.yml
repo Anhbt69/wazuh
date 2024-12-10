@@ -1,6 +1,6 @@
 ---
 - name: Update Wazuh Server
-  hosts: 192.168.10.187
+  hosts: all
   become: yes
   vars:
     wazuh_packages:
