@@ -6,7 +6,7 @@
    
     - name: Define the backup directory
       set_fact:
-        backup_dir: "/var/backups/wazuh_config"
+        backup_dir: "/var/ossec/backup/wazuh_config"
 
     - name: Ensure the backup directory exists
       file:
