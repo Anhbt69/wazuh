@@ -1,0 +1,52 @@
+---
+- name: Restore Wazuh Server Configuration
+  hosts: all
+  become: yes
+  vars:
+    backup_dir: "/var/backups/wazuh_config"
+    restore_timestamp: "20241210T212517761260"
+    backup_file: "{{ backup_dir }}/wazuh_config_{{ restore_timestamp }}.tar.gz"
+  tasks:
+    
+    - name: Check if the backup file exists
+      stat:
+        path: "{{ backup_file }}"
+      register: backup_file_check
+
+    
+    - name: Abort if backup file does not exist
+      fail:
+        msg: "The specified backup file does not exist: {{ backup_file }}. Cannot proceed with restore!"
+      when: not backup_file_check.stat.exists
+
+    
+    - name: Ensure /var/ossec exists and is writable
+      file:
+        path: "/var/ossec"
+        state: directory
+        mode: '0755'
+      register: ossec_directory_check
+
+    
+    - name: Abort if /var/ossec directory is not accessible or writable
+      fail:
+        msg: "/var/ossec directory does not exist or is not writable. Cannot restore configuration!"
+      when: ossec_directory_check.failed == true
+
+    
+    - name: Extract the backup file to restore configuration
+      command: "tar -xzf {{ backup_file }} -C /var/ossec"
+      register: restore_result
+      failed_when: restore_result.rc != 0
+
+    
+    - name: Verify restore was successful
+      debug:
+        msg: "Wazuh configuration restored successfully from {{ backup_file }}"
+      when: restore_result.rc == 0
+
+    
+    - name: Log failure if restore failed
+      debug:
+        msg: "Restore failed with error: {{ restore_result.stderr }}"
+      when: restore_result.rc != 0
