@@ -3,7 +3,7 @@
   become: yes
   tasks:
     - name: Search for failed logins
-      command: "grep 'Failed password' /var/ossec/logs/alerts.log"
+      command: "grep 'Failed password' /var/ossec/logs/alerts/alerts.log"
       register: failed_logins
 
     - name: Display failed login attempts
