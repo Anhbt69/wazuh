@@ -1,0 +1,11 @@
+- name: Threat Hunting
+  hosts: 192.168.10.187
+  become: yes
+  tasks:
+    - name: Search for suspicious activities in logs
+      command: "grep -i 'suspicious' /var/ossec/logs/alerts.log"
+      register: suspicious_logs
+
+    - name: Display suspicious log entries
+      debug:
+        msg: "{{ suspicious_logs.stdout }}"
