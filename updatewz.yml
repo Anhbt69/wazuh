@@ -1,0 +1,65 @@
+---
+- name: Update Wazuh Server and Agents
+  hosts: all
+  become: yes
+  vars:
+    wazuh_repo_url: "https://packages.wazuh.com/4.x/yum/"
+    wazuh_gpg_key: "https://packages.wazuh.com/key/GPG-KEY-WAZUH"
+    wazuh_packages:
+      - wazuh-manager
+      - wazuh-agent
+      - wazuh-api  # Nếu sử dụng API, giữ package này
+
+  tasks:
+    # Đảm bảo kho Wazuh repository tồn tại (RHEL/CentOS-based)
+    - name: Ensure Wazuh repository is configured
+      yum_repository:
+        name: wazuh
+        description: Wazuh repository
+        baseurl: "{{ wazuh_repo_url }}"
+        gpgcheck: yes
+        gpgkey: "{{ wazuh_gpg_key }}"
+      when: ansible_os_family == "RedHat"
+
+    # Đảm bảo kho Wazuh repository tồn tại (Debian/Ubuntu-based)
+    - name: Ensure Wazuh repository is configured
+      apt_repository:
+        repo: "deb {{ wazuh_repo_url }} stable main"
+        state: present
+        filename: wazuh
+      when: ansible_os_family == "Debian"
+
+    # Cập nhật danh sách gói trên Debian/Ubuntu
+    - name: Update package list (Debian/Ubuntu only)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    # Cập nhật gói Wazuh
+    - name: Update Wazuh packages
+      package:
+        name: "{{ wazuh_packages }}"
+        state: latest
+
+    # Kiểm tra phiên bản Wazuh sau khi cập nhật
+    - name: Check installed Wazuh Manager version
+      command: "/var/ossec/bin/wazuh-manager -v"
+      register: wazuh_manager_version
+      ignore_errors: yes
+      when: "'wazuh-manager' in wazuh_packages"
+
+    - name: Display Wazuh Manager version
+      debug:
+        msg: "Wazuh Manager Version: {{ wazuh_manager_version.stdout }}"
+      when: "'wazuh-manager' in wazuh_packages"
+
+    - name: Check installed Wazuh Agent version
+      command: "/var/ossec/bin/wazuh-agentd -v"
+      register: wazuh_agent_version
+      ignore_errors: yes
+      when: "'wazuh-agent' in wazuh_packages"
+
+    - name: Display Wazuh Agent version
+      debug:
+        msg: "Wazuh Agent Version: {{ wazuh_agent_version.stdout }}"
+      when: "'wazuh-agent' in wazuh_packages"
