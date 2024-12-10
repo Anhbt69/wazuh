@@ -1,11 +1,11 @@
 ---
-- name: Delete August
+- name: Delete Alert
   hosts: all
   become: yes
   tasks:
-    - name: Delete August
+    - name: Delete Alert
       file:
-        path: "/var/ossec/logs/alerts/2024/Aug/"
+        path: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-02.json"
         state: absent
       register: deleted_file
 
