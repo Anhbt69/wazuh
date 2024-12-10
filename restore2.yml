@@ -3,42 +3,50 @@
   hosts: all
   become: yes
   vars:
-    backup_dir: "/var/backups/wazuh_config"
+    backup_dir: "/var/ossec/backup/wazuh_config"
     restore_timestamp: "20241210T212517761260"
     backup_file: "{{ backup_dir }}/wazuh_config_{{ restore_timestamp }}.tar.gz"
+
   tasks:
-    # Kiểm tra file backup tồn tại
+   
     - name: Check if the backup file exists
       stat:
         path: "{{ backup_file }}"
       register: backup_file_check
 
-    # Dừng nếu file backup không tồn tại
+    
     - name: Abort if backup file does not exist
       fail:
         msg: "The specified backup file does not exist: {{ backup_file }}. Cannot proceed with restore!"
-      when: not backup_file_check.stat.exists
+      when: backup_file_check.stat.exists == false
 
-    # Đảm bảo thư mục /var/ossec tồn tại và có quyền ghi
+   
     - name: Ensure /var/ossec exists and is writable
       file:
         path: "/var/ossec"
         state: directory
         mode: '0755'
+      register: ossec_directory_check
 
-    # Giải nén file backup để khôi phục
+    
+    - name: Abort if /var/ossec directory is not accessible or writable
+      fail:
+        msg: "/var/ossec directory does not exist or is not writable. Cannot restore configuration!"
+      when: ossec_directory_check.failed == true
+
+    
     - name: Extract the backup file to restore configuration
-      shell: "tar -xzf {{ backup_file }} -C /var/ossec"
+      command: "tar -xzf {{ backup_file }} -C /var/ossec"
       register: restore_result
       failed_when: restore_result.rc != 0
 
-    # Xác nhận khôi phục thành công
+    
     - name: Verify restore was successful
       debug:
         msg: "Wazuh configuration restored successfully from {{ backup_file }}"
       when: restore_result.rc == 0
 
-    # Ghi log nếu khôi phục thất bại
+    
     - name: Log failure if restore failed
       debug:
         msg: "Restore failed with error: {{ restore_result.stderr }}"
