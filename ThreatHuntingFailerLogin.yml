@@ -2,10 +2,27 @@
   hosts: all
   become: yes
   tasks:
-    - name: Search for failed logins
+    - name: Search for failed logins in logs
       command: "grep 'Failed password' /var/ossec/logs/alerts/alerts.log"
       register: failed_logins
+      ignore_errors: yes  # Continue even if the command fails (e.g., if the file doesn't exist)
+
+    - name: Check if failed login attempts were found
+      debug:
+        msg: "No failed login attempts found." 
+      when: failed_logins.stdout == ""
 
     - name: Display failed login attempts
       debug:
         msg: "{{ failed_logins.stdout }}"
+      when: failed_logins.stdout != ""
+
+    - name: Ensure alerts log file exists
+      stat:
+        path: /var/ossec/logs/alerts/alerts.log
+      register: alerts_log_status
+
+    - name: Report if the alerts log file is missing
+      debug:
+        msg: "The log file /var/ossec/logs/alerts/alerts.log is missing."
+      when: not alerts_log_status.stat.exists
