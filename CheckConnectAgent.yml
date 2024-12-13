@@ -1,23 +1,7 @@
----
-- name: Test connection between AWX and Wazuh Agent
-  hosts: all
-  become: yes
+- name: Get Wazuh agent status on Windows
+  hosts: 192.168.10.198
   tasks:
-    - name: Check if wazuh-agent is running
-      systemd:
+    - name: Check Wazuh Agent status
+      win_service:
         name: wazuh-agent
         state: started
-      register: wazuh_agent_status
-
-    - name: Output Wazuh Agent status
-      debug:
-        msg: "Wazuh Agent is running: {{ wazuh_agent_status.state }}"
-
-    - name: Check Wazuh agent logs
-      command: tail -n 10 /var/ossec/logs/ossec.log
-      register: wazuh_agent_logs
-      ignore_errors: yes
-
-    - name: Display last 10 lines of Wazuh agent logs
-      debug:
-        msg: "{{ wazuh_agent_logs.stdout_lines }}"
