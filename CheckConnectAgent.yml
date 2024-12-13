@@ -1,6 +1,6 @@
 ---
 - name: Test connection between AWX and Wazuh Agent
-  hosts: all
+  hosts: 192.168.10.198
   become: yes
   tasks:
     - name: Check if wazuh-agent is running
