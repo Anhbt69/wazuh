@@ -1,5 +1,5 @@
 - name: Get Wazuh agent status on Windows
-  hosts: 192.168.10.198
+  hosts: all
   tasks:
     - name: Check Wazuh Agent status
       win_service:
