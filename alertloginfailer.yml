@@ -1,0 +1,14 @@
+---
+- name: Monitor login attempts and send alerts
+  hosts: 192.168.10.198
+  become: true
+  tasks:
+    - name: Check Wazuh alerts for failed login attempts
+      shell: |
+        tail -n 50 /var/ossec/logs/alerts/alerts.log | grep "Multiple failed login attempts detected" | wc -l
+      register: failed_logins
+    
+    - name: Send an alert if failed logins exceed threshold
+      debug:
+        msg: "Warning: More than 5 failed login attempts detected!"
+      when: failed_logins.stdout|int > 5
