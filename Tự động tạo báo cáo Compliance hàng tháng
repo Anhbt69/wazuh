@@ -1,0 +1,51 @@
+- name: Generate monthly compliance report
+  hosts: all
+  become: yes
+  vars:
+    report_directory: "/var/reports/compliance"
+    report_file: "compliance_report_{{ ansible_date_time.year }}_{{ ansible_date_time.month }}.log"
+    compliance_criteria:
+      - name: "Inventory data integrity"
+        check: "sha256sum /path/to/inventory_data.csv"
+        expected_hash: "expected_hash_value_for_inventory_data"
+      - name: "Critical software version compliance"
+        check: "dpkg -l | grep critical-software"
+        expected_value: "critical-software-version"
+      - name: "Disk space utilization"
+        check: "df -h / | awk 'NR==2 {print $5}'"
+        expected_value: "<90%"
+
+  tasks:
+    - name: Ensure report directory exists
+      file:
+        path: "{{ report_directory }}"
+        state: directory
+        mode: '0755'
+
+    - name: Initialize the monthly compliance report file
+      copy:
+        content: "Monthly Compliance Report - {{ ansible_date_time.year }}/{{ ansible_date_time.month }}\n\n"
+        dest: "{{ report_directory }}/{{ report_file }}"
+        force: yes
+
+    - name: Perform compliance checks and log results
+      block:
+        - name: Run compliance checks
+          shell: "{{ item.check }}"
+          register: compliance_result
+          with_items: "{{ compliance_criteria }}"
+
+        - name: Record compliance results
+          lineinfile:
+            path: "{{ report_directory }}/{{ report_file }}"
+            line: "Criteria: {{ item.name }} - Result: {{ 'PASSED' if compliance_result.results[loop.index0].stdout.split()[0] == item.expected_hash or compliance_result.results[loop.index0].stdout.strip() == item.expected_value else 'FAILED' }}"
+          with_items: "{{ compliance_criteria }}"
+
+    - name: Notify if compliance failed
+      debug:
+        msg: "Compliance check failed for one or more criteria!"
+      when: "'FAILED' in lookup('file', '{{ report_directory }}/{{ report_file }}')"
+
+    - name: Display report location
+      debug:
+        msg: "Monthly compliance report saved at {{ report_directory }}/{{ report_file }}"
