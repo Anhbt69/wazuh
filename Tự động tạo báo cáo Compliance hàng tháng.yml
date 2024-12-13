@@ -1,51 +1,55 @@
-- name: Generate monthly compliance report
-  hosts: all
-  become: yes
+- name: Generate monthly compliance report from Wazuh
+  hosts: localhost
+  gather_facts: no
   vars:
-    report_directory: "/var/reports/compliance"
-    report_file: "compliance_report_{{ ansible_date_time.year }}_{{ ansible_date_time.month }}.log"
-    compliance_criteria:
-      - name: "Inventory data integrity"
-        check: "sha256sum /path/to/inventory_data.csv"
-        expected_hash: "expected_hash_value_for_inventory_data"
-      - name: "Critical software version compliance"
-        check: "dpkg -l | grep critical-software"
-        expected_value: "critical-software-version"
-      - name: "Disk space utilization"
-        check: "df -h / | awk 'NR==2 {print $5}'"
-        expected_value: "<90%"
+    wazuh_api_url: "http://<wazuh_server_ip>:55000"
+    wazuh_api_token: "your_api_token_here"
+    compliance_report_dir: "/var/reports/wazuh_compliance"
+    compliance_report_file: "wazuh_compliance_report_{{ ansible_date_time.year }}_{{ ansible_date_time.month }}.log"
 
   tasks:
-    - name: Ensure report directory exists
+    - name: Ensure compliance report directory exists
       file:
-        path: "{{ report_directory }}"
+        path: "{{ compliance_report_dir }}"
         state: directory
         mode: '0755'
 
-    - name: Initialize the monthly compliance report file
+    - name: Fetch compliance data from Wazuh
+      uri:
+        url: "{{ wazuh_api_url }}/sca"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ wazuh_api_token }}"
+        return_content: yes
+        status_code: 200
+      register: compliance_data
+
+    - name: Parse compliance data
+      set_fact:
+        compliance_results: "{{ compliance_data.json.data }}"
+
+    - name: Generate compliance report header
       copy:
-        content: "Monthly Compliance Report - {{ ansible_date_time.year }}/{{ ansible_date_time.month }}\n\n"
-        dest: "{{ report_directory }}/{{ report_file }}"
+        content: |
+          Wazuh Monthly Compliance Report - {{ ansible_date_time.year }}/{{ ansible_date_time.month }}
+          ===========================================================
+          \n
+        dest: "{{ compliance_report_dir }}/{{ compliance_report_file }}"
         force: yes
 
-    - name: Perform compliance checks and log results
-      block:
-        - name: Run compliance checks
-          shell: "{{ item.check }}"
-          register: compliance_result
-          with_items: "{{ compliance_criteria }}"
-
-        - name: Record compliance results
-          lineinfile:
-            path: "{{ report_directory }}/{{ report_file }}"
-            line: "Criteria: {{ item.name }} - Result: {{ 'PASSED' if compliance_result.results[loop.index0].stdout.split()[0] == item.expected_hash or compliance_result.results[loop.index0].stdout.strip() == item.expected_value else 'FAILED' }}"
-          with_items: "{{ compliance_criteria }}"
+    - name: Append compliance results to report
+      lineinfile:
+        path: "{{ compliance_report_dir }}/{{ compliance_report_file }}"
+        line: "Agent: {{ item.agent.name }}, CIS Profile: {{ item.policy }}, Passed: {{ item.passed }}, Failed: {{ item.failed }}"
+      with_items: "{{ compliance_results }}"
+      when: item.agent.name is defined
 
     - name: Notify if compliance failed
       debug:
-        msg: "Compliance check failed for one or more criteria!"
-      when: "'FAILED' in lookup('file', '{{ report_directory }}/{{ report_file }}')"
+        msg: "One or more agents have compliance issues. Check the report at {{ compliance_report_dir }}/{{ compliance_report_file }}"
+      when: "'Failed' in item.failed | string"
+      with_items: "{{ compliance_results }}"
 
     - name: Display report location
       debug:
-        msg: "Monthly compliance report saved at {{ report_directory }}/{{ report_file }}"
+        msg: "Monthly compliance report saved at {{ compliance_report_dir }}/{{ compliance_report_file }}"
