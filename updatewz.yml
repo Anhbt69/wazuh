@@ -4,13 +4,30 @@
   become: yes
   tasks:
 
-    # Step 1: Check OS family and update the repository
-    - name: Add Wazuh repository for Debian/Ubuntu
-      apt_repository:
-        repo: "deb https://packages.wazuh.com/4.x/apt/ stable main"
-        state: present
+    # Step 1: Remove existing conflicting Wazuh repository if it exists
+    - name: Remove old Wazuh repository list
+      file:
+        path: /etc/apt/sources.list.d/wazuh.list
+        state: absent
       when: ansible_os_family == "Debian"
 
+    - name: Remove Wazuh repository cache (RedHat-based systems)
+      command: yum-config-manager --disable wazuh
+      ignore_errors: yes
+      when: ansible_os_family == "RedHat"
+
+    # Step 2: Add Wazuh repository for Debian/Ubuntu
+    - name: Add Wazuh GPG key for Debian/Ubuntu
+      command: >
+        curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor | sudo tee /usr/share/keyrings/wazuh.gpg > /dev/null
+      when: ansible_os_family == "Debian"
+
+    - name: Add Wazuh repository for Debian/Ubuntu
+      command: >
+        echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" | sudo tee /etc/apt/sources.list.d/wazuh.list
+      when: ansible_os_family == "Debian"
+
+    # Step 3: Add Wazuh repository for RedHat/CentOS
     - name: Add Wazuh repository for RedHat/CentOS
       yum_repository:
         name: wazuh
@@ -22,7 +39,7 @@
         state: present
       when: ansible_os_family == "RedHat"
 
-    # Step 2: Update the package cache
+    # Step 4: Update package cache
     - name: Update package cache for Debian/Ubuntu
       apt:
         update_cache: yes
@@ -33,7 +50,7 @@
         update_cache: yes
       when: ansible_os_family == "RedHat"
 
-    # Step 3: Upgrade Wazuh Manager to the latest version
+    # Step 5: Upgrade Wazuh Manager to the latest version
     - name: Upgrade Wazuh Manager on Debian/Ubuntu
       apt:
         name: wazuh-manager
@@ -46,7 +63,7 @@
         state: latest
       when: ansible_os_family == "RedHat"
 
-    # Step 4: Check Wazuh Manager version after the upgrade
+    # Step 6: Check Wazuh Manager version after the upgrade
     - name: Get the current Wazuh Manager version
       command: wazuh-manager -v
       register: wazuh_version
@@ -56,13 +73,13 @@
       debug:
         msg: "Wazuh Manager version: {{ wazuh_version.stdout }}"
 
-    # Step 5: Restart Wazuh Manager service
+    # Step 7: Restart Wazuh Manager service
     - name: Restart Wazuh Manager service
       systemd:
         name: wazuh-manager
         state: restarted
 
-    # Step 6: Ensure Wazuh Manager service is running
+    # Step 8: Ensure Wazuh Manager service is running
     - name: Ensure Wazuh Manager service is running and enabled
       systemd:
         name: wazuh-manager
