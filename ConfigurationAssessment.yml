@@ -1,0 +1,34 @@
+---
+- name: Configuration Assessment on Endpoints
+  hosts: all
+  become: yes
+  tasks:
+    - name: Check running services
+      command: systemctl list-units --type=service --state=running
+      register: running_services
+
+    - name: Display running services
+      debug:
+        msg: "Running services: {{ running_services.stdout }}"
+
+    - name: Check installed packages
+      command: dpkg -l
+      when: ansible_os_family == "Debian"
+      register: installed_packages
+
+    - name: Check installed packages on RedHat/CentOS
+      command: rpm -qa
+      when: ansible_os_family == "RedHat"
+      register: installed_packages
+
+    - name: Display installed packages
+      debug:
+        msg: "Installed packages: {{ installed_packages.stdout }}"
+
+    - name: Check security configurations
+      shell: "grep -E 'Password|PermitRootLogin|X11Forwarding' /etc/ssh/sshd_config"
+      register: ssh_config
+
+    - name: Display SSH security configuration
+      debug:
+        msg: "SSH Configuration: {{ ssh_config.stdout }}"
