@@ -2,52 +2,45 @@
 - name: Restore Wazuh Server Configuration
   hosts: all
   become: yes
-  vars:
-    backup_dir: "/var/ossec/backup/wazuh_config"
-    restore_timestamp: "20241210T22271198716"
-    backup_file: "{{ backup_dir }}/wazuh_config_{{ restore_timestamp }}.tar.gz"
-
   tasks:
-   
+    
+    - name: Define the backup directory and file
+      set_fact:
+        backup_dir: "/var/ossec/backup/wazuh_config"
+        backup_file: "{{ backup_dir }}/wazuh_config_{{ restore_timestamp }}.tar.gz"  # Replace with the backup timestamp if needed
+
+    - name: Ensure Wazuh configuration directory exists
+      file:
+        path: "/var/ossec/etc"
+        state: directory
+        mode: '0755'
+
     - name: Check if the backup file exists
       stat:
         path: "{{ backup_file }}"
-      register: backup_file_check
+      register: backup_stat
 
-    
-    - name: Abort if backup file does not exist
+    - name: Fail if the backup file does not exist
       fail:
-        msg: "The specified backup file does not exist: {{ backup_file }}. Cannot proceed with restore!"
-      when: backup_file_check.stat.exists == false
+        msg: "Backup file {{ backup_file }} does not exist!"
+      when: backup_stat.stat.exists == False
 
-   
-    - name: Ensure /var/ossec exists and is writable
-      file:
-        path: "/var/ossec"
-        state: directory
-        mode: '0755'
-      register: ossec_directory_check
-
-    
-    - name: Abort if /var/ossec directory is not accessible or writable
-      fail:
-        msg: "/var/ossec directory does not exist or is not writable. Cannot restore configuration!"
-      when: ossec_directory_check.failed == true
-
-    
-    - name: Extract the backup file to restore configuration
+    - name: Restore Wazuh configuration files from backup
       command: "tar -xzf {{ backup_file }} -C /var/ossec"
       register: restore_result
       failed_when: restore_result.rc != 0
 
-    
     - name: Verify restore was successful
       debug:
         msg: "Wazuh configuration restored successfully from {{ backup_file }}"
       when: restore_result.rc == 0
-
-    
+      
     - name: Log failure if restore failed
       debug:
         msg: "Restore failed with error: {{ restore_result.stderr }}"
       when: restore_result.rc != 0
+
+    - name: Restart Wazuh Manager service to apply restored configuration
+      systemd:
+        name: wazuh-manager
+        state: restarted
