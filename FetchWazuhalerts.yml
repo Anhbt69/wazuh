@@ -1,0 +1,16 @@
+---
+- name: Fetch Wazuh alerts
+  hosts: all
+  tasks:
+    - name: Get alerts from Wazuh API
+      uri:
+        url: "http://192.168.10.187:55000/api/v4/alerts"
+        method: GET
+        headers:
+          Content-Type: "application/json"
+          Authorization: "Bearer {{ wazuh_api_key }}"
+      register: wazuh_alerts
+
+    - name: Print Wazuh alerts
+      debug:
+        var: wazuh_alerts.json
