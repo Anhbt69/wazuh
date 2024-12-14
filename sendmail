@@ -1,0 +1,9 @@
+- name: Send Email Alert for Malware Detection
+  hosts: all
+  tasks:
+    - name: Send alert email if malware detected
+      mail:
+        to: "tuananhpc01@gmail.com"
+        subject: "Malware Detection Alert"
+        body: "Malware detected on the server. Details: {{ malware_logs.stdout_lines | join('\n') }}"
+      when: malware_logs.stdout_lines | length > 0
