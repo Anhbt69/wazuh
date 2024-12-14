@@ -1,56 +1,70 @@
 ---
 - name: Update Wazuh Server
-  hosts: all
+  hosts: wazuh-manager
   become: yes
   tasks:
-    # Step 1: Cập nhật danh sách gói
-    - name: Update package cache
+
+    # Step 1: Check OS family and update the repository
+    - name: Add Wazuh repository for Debian/Ubuntu
+      apt_repository:
+        repo: "deb https://packages.wazuh.com/4.x/apt/ stable main"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Wazuh repository for RedHat/CentOS
+      yum_repository:
+        name: wazuh
+        description: "Wazuh repository"
+        baseurl: https://packages.wazuh.com/4.x/rpm/
+        enabled: yes
+        gpgcheck: yes
+        gpgkey: https://packages.wazuh.com/key/GPG-KEY-WAZUH
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    # Step 2: Update the package cache
+    - name: Update package cache for Debian/Ubuntu
       apt:
         update_cache: yes
       when: ansible_os_family == "Debian"
 
-    - name: Update package cache (RedHat-based systems)
+    - name: Update package cache for RedHat/CentOS
       yum:
         update_cache: yes
       when: ansible_os_family == "RedHat"
 
-    # Step 2: Nâng cấp gói Wazuh Manager lên phiên bản mới nhất
-    - name: Upgrade Wazuh Manager to the latest version (Debian/Ubuntu)
+    # Step 3: Upgrade Wazuh Manager to the latest version
+    - name: Upgrade Wazuh Manager on Debian/Ubuntu
       apt:
         name: wazuh-manager
         state: latest
       when: ansible_os_family == "Debian"
 
-    - name: Upgrade Wazuh Manager to the latest version (RedHat/CentOS)
+    - name: Upgrade Wazuh Manager on RedHat/CentOS
       yum:
         name: wazuh-manager
         state: latest
       when: ansible_os_family == "RedHat"
 
-    # Step 3: Kiểm tra phiên bản Wazuh sau khi cập nhật
-    - name: Get Wazuh Manager version
+    # Step 4: Check Wazuh Manager version after the upgrade
+    - name: Get the current Wazuh Manager version
       command: wazuh-manager -v
       register: wazuh_version
       changed_when: false
 
-    - name: Display the Wazuh Manager version
+    - name: Display the current Wazuh Manager version
       debug:
-        msg: "Wazuh Manager is now running version {{ wazuh_version.stdout }}"
+        msg: "Wazuh Manager version: {{ wazuh_version.stdout }}"
 
-    # Step 4: Khởi động lại dịch vụ Wazuh Manager
+    # Step 5: Restart Wazuh Manager service
     - name: Restart Wazuh Manager service
       systemd:
         name: wazuh-manager
         state: restarted
 
-    # Step 5: Đảm bảo dịch vụ Wazuh Manager đang chạy
-    - name: Ensure Wazuh Manager service is running
+    # Step 6: Ensure Wazuh Manager service is running
+    - name: Ensure Wazuh Manager service is running and enabled
       systemd:
         name: wazuh-manager
         state: started
         enabled: yes
-
-    # Optional: Gửi thông báo nếu cập nhật thành công
-    - name: Send notification
-      debug:
-        msg: "Wazuh Manager has been successfully updated and restarted!"
