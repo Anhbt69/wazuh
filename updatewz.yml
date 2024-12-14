@@ -1,6 +1,6 @@
 ---
 - name: Update Wazuh Server
-  hosts: wazuh-manager
+  hosts: 192.168.10.187
   become: yes
   tasks:
 
