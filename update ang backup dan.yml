@@ -2,7 +2,16 @@
 - name: Update and Backup Wazuh
   hosts: 192.168.10.187
   become: true
-  gather_facts: no
+  gather_facts: false
+
+  pre_tasks:
+    - name: Install Python3 if missing
+      raw: "sudo apt-get update && sudo apt-get install -y python3"
+      register: python_install
+      failed_when: python_install.rc != 0
+
+    - name: Gather facts now that Python is available
+      setup:
 
   tasks:
     - name: Ensure Wazuh Manager is updated to the latest version
@@ -26,11 +35,10 @@
         group: wazuh
 
     - name: Create backup of Wazuh configuration and data
-      command: tar -czf /var/ossec/backup/wazuh_backup_{{ ansible_date_time.date }}.tar.gz /var/ossec/
+      command: tar -czf /var/ossec/backup/wazuh_backup_{{ ansible_date_time.date }}.tar.gz /var/ossec
       args:
         creates: /var/ossec/backup/wazuh_backup_{{ ansible_date_time.date }}.tar.gz
       register: backup_result
-      failed_when: backup_result.rc != 0
 
     - name: Notify if backup was successful
       debug:
@@ -41,26 +49,12 @@
       copy:
         src: /var/ossec/backup/wazuh_backup_{{ ansible_date_time.date }}.tar.gz
         dest: /home/wazuh/backup/wazuh_backup_{{ ansible_date_time.date }}.tar.gz
+        remote_src: yes
         owner: wazuh
         group: wazuh
-        remote_src: yes
       register: copy_result
 
     - name: Notify if backup was copied successfully
       debug:
         msg: "Backup copied successfully to /home/wazuh/backup/wazuh_backup_{{ ansible_date_time.date }}.tar.gz"
       when: copy_result.changed
-
-    - name: Clean up old backups older than 7 days
-      find:
-        paths: /var/ossec/backup
-        age: 7d
-        patterns: "*.tar.gz"
-      register: old_backups
-
-    - name: Remove old backups
-      file:
-        path: "{{ item.path }}"
-        state: absent
-      with_items: "{{ old_backups.files }}"
-      when: old_backups.matched > 0
