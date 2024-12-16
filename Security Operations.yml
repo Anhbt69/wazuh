@@ -1,0 +1,79 @@
+- name: Security Operations Automation Playbook
+  hosts: wazuh_servers
+  become: yes
+  vars:
+    wazuh_api_url: "http://{{ ansible_host }}:55000"
+    wazuh_api_token: "192.168.10.187"
+    compliance_standards:
+      - PCI DSS
+      - GDPR
+      - HIPAA
+      - NIST 800-53
+    report_directory: "/var/reports/security_operations"
+    report_file: "security_operations_report_{{ ansible_date_time.year }}_{{ ansible_date_time.month }}.log"
+
+  tasks:
+    # Task 1: Ensure report directory exists
+    - name: Create report directory if not exists
+      file:
+        path: "{{ report_directory }}"
+        state: directory
+        mode: '0755'
+
+    # Task 2: Fetch Compliance Status for each standard
+    - name: Fetch compliance status for standards
+      uri:
+        url: "{{ wazuh_api_url }}/compliance/{{ item }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ wazuh_api_token }}"
+        return_content: yes
+      register: compliance_results
+      with_items: "{{ compliance_standards }}"
+
+    # Task 3: Write Compliance Results to Report
+    - name: Write compliance status to report
+      lineinfile:
+        path: "{{ report_directory }}/{{ report_file }}"
+        line: "Standard: {{ item.item }}, Status: {{ item.json.status }}"
+      with_items: "{{ compliance_results.results }}"
+
+    # Task 4: Check Security Alerts from Wazuh
+    - name: Retrieve security alerts from Wazuh
+      uri:
+        url: "{{ wazuh_api_url }}/security/alerts"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ wazuh_api_token }}"
+        return_content: yes
+      register: security_alerts
+
+    - name: Write security alerts to report
+      lineinfile:
+        path: "{{ report_directory }}/{{ report_file }}"
+        line: "Security Alert: {{ item.rule.description }} | Severity: {{ item.rule.level }}"
+      with_items: "{{ security_alerts.json.data }}"
+      when: item.rule.level >= 10  # Only log high-severity alerts
+
+    # Task 5: Notify if Non-Compliant or Critical Alerts Found
+    - name: Notify administrator if critical issues found
+      debug:
+        msg: "Critical security alerts or non-compliance found! Check the report at {{ report_directory }}/{{ report_file }}."
+      when: "'non-compliant' in compliance_results.results or security_alerts.json.total_affected_items > 0"
+
+    # Task 6: Clean up old reports
+    - name: Delete old reports older than 30 days
+      find:
+        paths: "{{ report_directory }}"
+        age: 30d
+      register: old_reports
+
+    - name: Remove old reports
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ old_reports.files }}"
+
+    - name: Display report location
+      debug:
+        msg: "Security Operations report saved at {{ report_directory }}/{{ report_file }}"
