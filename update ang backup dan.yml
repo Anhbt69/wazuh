@@ -1,19 +1,27 @@
 ---
 - name: Update and Backup Wazuh
   hosts: 192.168.10.187
+  gather_facts: no
   become: true
-  gather_facts: false
 
-  pre_tasks:
-    - name: Install Python3 if missing
-      raw: "sudo apt-get update && sudo apt-get install -y python3"
+  vars:
+    ansible_user: wazuh              # User đăng nhập vào máy đích
+    ansible_ssh_private_key_file: /path/to/ssh_key  # Đường dẫn đến SSH key
+    ansible_become_method: sudo      # Sử dụng sudo để nâng quyền
+
+  tasks:
+    - name: Check if Python3 is installed
+      raw: "which python3"
+      register: python_check
+      failed_when: false
+      changed_when: false
+
+    - name: Install Python3 if not installed
+      raw: "apt-get update && apt-get install -y python3"
+      when: python_check.rc != 0
       register: python_install
       failed_when: python_install.rc != 0
 
-    - name: Gather facts now that Python is available
-      setup:
-
-  tasks:
     - name: Ensure Wazuh Manager is updated to the latest version
       apt:
         name: wazuh-manager
