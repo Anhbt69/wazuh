@@ -1,0 +1,68 @@
+---
+- name: Security Operations Automation Playbook (No API)
+  hosts: all
+  become: yes
+
+  vars:
+    compliance_standards:
+      - "PCI_DSS"
+      - "GDPR"
+      - "HIPAA"
+      - "NIST_800_53"
+    wazuh_log_file: "/var/ossec/logs/alerts/alerts.log"  # Log file chứa các thông báo
+    report_directory: "/var/reports/security_operations"
+    report_file: "security_operations_report_{{ ansible_date_time.date }}.log"
+
+  tasks:
+    - name: Ensure report directory exists
+      file:
+        path: "{{ report_directory }}"
+        state: directory
+        mode: '0755'
+
+    - name: Search for compliance keywords in Wazuh logs
+      shell: "grep -E '{{ compliance_standards | join('|') }}' {{ wazuh_log_file }}"
+      register: compliance_logs
+      ignore_errors: yes
+
+    - name: Write compliance status to report
+      copy:
+        dest: "{{ report_directory }}/{{ report_file }}"
+        content: |
+          Compliance Status Report:
+          -------------------------
+          {{ compliance_logs.stdout }}
+      when: compliance_logs.stdout != ""
+
+    - name: Search for high-severity alerts in Wazuh logs
+      shell: "grep -i 'severity: high' {{ wazuh_log_file }}"
+      register: high_severity_alerts
+      ignore_errors: yes
+
+    - name: Append high-severity alerts to report
+      lineinfile:
+        path: "{{ report_directory }}/{{ report_file }}"
+        line: "High Severity Alert: {{ item }}"
+      with_items: "{{ high_severity_alerts.stdout_lines }}"
+      when: high_severity_alerts.stdout != ""
+
+    - name: Notify if compliance or security issues found
+      debug:
+        msg: "Compliance issues or high-severity alerts detected! Report saved at {{ report_directory }}/{{ report_file }}"
+      when: compliance_logs.stdout != "" or high_severity_alerts.stdout != ""
+
+    - name: Delete old reports older than 30 days
+      find:
+        paths: "{{ report_directory }}"
+        age: 30d
+      register: old_reports
+
+    - name: Remove old reports
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ old_reports.files }}"
+
+    - name: Display report location
+      debug:
+        msg: "Security Operations report saved at {{ report_directory }}/{{ report_file }}"
