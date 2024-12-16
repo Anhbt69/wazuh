@@ -1,6 +1,6 @@
 ---
 - name: Parse Wazuh Logs for Threat Detection
-  hosts: wazuh_servers
+  hosts: 192.168.10.187
   become: true
 
   vars:
