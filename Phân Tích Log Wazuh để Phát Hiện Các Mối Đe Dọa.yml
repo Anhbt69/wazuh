@@ -1,0 +1,36 @@
+---
+- name: Parse Wazuh Logs for Threat Detection
+  hosts: wazuh_servers
+  become: true
+
+  vars:
+    wazuh_log_file: "/var/ossec/logs/alerts/alerts.json"
+    threat_keywords:
+      - "malware"
+      - "unauthorized"
+      - "MITRE"
+      - "exploit"
+    report_file: "/var/reports/wazuh_threat_report.log"
+
+  tasks:
+    - name: Ensure report directory exists
+      file:
+        path: "{{ report_file | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Search for threat keywords in Wazuh logs
+      shell: "grep -E '{{ threat_keywords | join('|') }}' {{ wazuh_log_file }}"
+      register: threat_logs
+      ignore_errors: yes
+
+    - name: Write threat detection results to report
+      copy:
+        dest: "{{ report_file }}"
+        content: "{{ threat_logs.stdout }}"
+      when: threat_logs.stdout != ""
+
+    - name: Notify if threats were detected
+      debug:
+        msg: "Threats detected! Report saved at {{ report_file }}"
+      when: threat_logs.stdout != ""
