@@ -1,0 +1,24 @@
+---
+- name: Wazuh Control Playbook
+  hosts: 192.168.10.187  
+  become: yes
+
+  tasks:
+    - name: Check Wazuh manager status
+      command: /var/ossec/bin/wazuh-control status
+      register: wazuh_status
+      ignore_errors: yes
+
+    - name: Display Wazuh status
+      debug:
+        var: wazuh_status.stdout_lines
+
+    - name: Restart Wazuh manager if not running
+      command: /var/ossec/bin/wazuh-control restart
+      when: wazuh_status.rc != 0 or "'wazuh-manager is running' not in wazuh_status.stdout"
+      register: restart_result
+
+    - name: Display restart result
+      debug:
+        var: restart_result.stdout_lines
+      when: restart_result is changed
