@@ -1,14 +1,14 @@
 - name: Security Operations Automation Playbook
-  hosts: all  # Sửa từ 'wazuh_servers' thành 'all' để chạy trên toàn bộ hosts trong inventory
+  hosts: all
   become: yes
   vars:
     wazuh_api_url: "http://{{ ansible_host }}:55000"
-    wazuh_api_token: "192.168.10.187"
+    wazuh_api_token: "192.168.10.187"  # Sử dụng token hợp lệ từ Wazuh API
     compliance_standards:
-      - PCI DSS
+      - PCI_DSS    # Sửa tên tiêu chuẩn để loại bỏ dấu cách
       - GDPR
       - HIPAA
-      - NIST 800-53
+      - NIST_800_53
     report_directory: "/var/reports/security_operations"
     report_file: "security_operations_report_{{ ansible_date_time.year }}_{{ ansible_date_time.month }}.log"
 
@@ -27,12 +27,13 @@
           Authorization: "Bearer {{ wazuh_api_token }}"
         return_content: yes
       register: compliance_results
+      failed_when: compliance_results.status != 200
       with_items: "{{ compliance_standards }}"
 
     - name: Write compliance status to report
       lineinfile:
         path: "{{ report_directory }}/{{ report_file }}"
-        line: "Standard: {{ item.item }}, Status: {{ item.json.status }}"
+        line: "Standard: {{ item.item }}, Status: {{ item.json.status | default('Failed') }}"
       with_items: "{{ compliance_results.results }}"
 
     - name: Retrieve security alerts from Wazuh
@@ -43,13 +44,14 @@
           Authorization: "Bearer {{ wazuh_api_token }}"
         return_content: yes
       register: security_alerts
+      failed_when: security_alerts.status != 200
 
     - name: Write security alerts to report
       lineinfile:
         path: "{{ report_directory }}/{{ report_file }}"
-        line: "Security Alert: {{ item.rule.description }} | Severity: {{ item.rule.level }}"
+        line: "Security Alert: {{ item.rule.description | default('N/A') }} | Severity: {{ item.rule.level | default('N/A') }}"
       with_items: "{{ security_alerts.json.data }}"
-      when: item.rule.level >= 10  # Only log high-severity alerts
+      when: item.rule.level | default(0) | int >= 10
 
     - name: Notify administrator if critical issues found
       debug:
