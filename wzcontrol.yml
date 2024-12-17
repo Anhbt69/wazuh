@@ -1,7 +1,8 @@
 ---
 - name: Wazuh Control Playbook
-  hosts: 192.168.10.187  
+  hosts: 192.168.10.187
   become: yes
+  gather_facts: no
 
   tasks:
     - name: Check Wazuh manager status
@@ -11,14 +12,16 @@
 
     - name: Display Wazuh status
       debug:
-        var: wazuh_status.stdout_lines
+        msg: "{{ wazuh_status.stdout_lines }}"
 
     - name: Restart Wazuh manager if not running
       command: /var/ossec/bin/wazuh-control restart
-      when: wazuh_status.rc != 0 or "'wazuh-manager is running' not in wazuh_status.stdout"
+      when: wazuh_status.rc != 0 or ('wazuh-manager is running' not in wazuh_status.stdout | default(''))
       register: restart_result
+      failed_when: restart_result.rc != 0
+      ignore_errors: no
 
     - name: Display restart result
       debug:
-        var: restart_result.stdout_lines
-      when: restart_result is changed
+        msg: "{{ restart_result.stdout_lines }}"
+      when: restart_result is defined and restart_result.rc == 0
