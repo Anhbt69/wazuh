@@ -1,5 +1,5 @@
 ---
-- name: Extract Wazuh alerts with level >= 5
+- name: Show full Wazuh log for December 17, 2024
   hosts: all
   become: true
   gather_facts: no
@@ -10,31 +10,8 @@
     - name: Read full log file content
       slurp:
         src: "{{ log_file }}"
-      register: raw_log
+      register: full_log
 
-    - name: Decode and split log lines
-      set_fact:
-        log_lines: "{{ raw_log['content'] | b64decode | split('\n') }}"
-
-    - name: Filter valid logs and rule.level >= 5
-      set_fact:
-        filtered_logs: >-
-          {{ log_lines | map('parse_json_safe') | selectattr('rule.level', '>=', 5) | list }}
-
-    - name: Display filtered logs
+    - name: Decode and display full log content
       debug:
-        msg: "ID: {{ item.rule.id }}, Level: {{ item.rule.level }}, Description: {{ item.rule.description }}"
-      loop: "{{ filtered_logs }}"
-
-  # Add custom filter for safe JSON parsing
-  vars:
-    parse_json_safe: |
-      {% for line in log_lines %}
-      {% if line | length > 0 %}
-        {% try %}
-          {{ line | from_json }}
-        {% except %}
-          {}
-        {% endtry %}
-      {% endif %}
-      {% endfor %}
+        msg: "{{ full_log['content'] | b64decode }}"
