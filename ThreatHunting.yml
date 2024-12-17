@@ -12,14 +12,19 @@
         src: "{{ log_file }}"
       register: full_log
 
-    - name: Decode log content
+    - name: Decode log content and split lines
       set_fact:
-        decoded_logs: "{{ full_log['content'] | b64decode | splitlines }}"
+        decoded_logs: "{{ full_log['content'] | b64decode | split('\n') }}"
 
     - name: Parse and filter logs with level > 4
       set_fact:
         filtered_logs: >-
-          {{ decoded_logs | map('from_json') | selectattr('level', 'gt', 4) | list }}
+          {{ decoded_logs 
+             | select('search', '{')  # Chọn các dòng JSON hợp lệ
+             | map('from_json')       # Parse JSON
+             | selectattr('level', 'gt', 4) 
+             | list 
+          }}
 
     - name: Display filtered log content
       debug:
