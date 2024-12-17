@@ -25,13 +25,6 @@
       when: high_level_alerts.stdout == ""
 
     - name: Hiển thị cảnh báo mức độ cao
-  debug:
-    msg: >-
-      "Cảnh báo mức độ cao: {{ item.rule.description | default('Không có mô tả') }} - Level: {{ item.rule.level | default('Không xác định') }}"
-  loop: >-
-    {{ high_level_alerts.stdout_lines 
-       | map('from_json') 
-       | selectattr('rule', 'defined') 
-       | selectattr('rule.level', 'defined') 
-       | list }}
-
+      debug:
+        msg: "Cảnh báo mức độ cao: {{ item.rule.description }} - Level: {{ item.rule.level }}"
+      loop: "{{ high_level_alerts.stdout_lines | map('from_json') | list }}"
