@@ -1,5 +1,5 @@
 ---
-- name: Update and Backup Wazuh
+- name: Update
   hosts: 192.168.10.187
   become: true
  
