@@ -12,12 +12,14 @@
         name: jq
         state: present
 
-    - name: Đọc file cảnh báo Wazuh và lọc theo level >= {{ alert_level_threshold }}
-      shell: "tail -n 1000 {{ wazuh_alerts_file }} | jq -c 'select(.rule.level >= {{ alert_level_threshold }})'"
+    - name: Lọc các dòng JSON hợp lệ từ file Wazuh
+      shell: |
+        tail -n 1000 {{ wazuh_alerts_file }} | \
+        grep '^{.*}$' | jq -c 'select(.rule.level != null and .rule.level >= {{ alert_level_threshold }})'
       register: high_level_alerts
-      changed_when: false  # Không đánh dấu task này là 'changed'
+      changed_when: false
 
-    - name: Kiểm tra có cảnh báo nào không
+    - name: Kiểm tra nếu không có cảnh báo mức độ cao
       fail:
         msg: "Không có cảnh báo nào có level >= {{ alert_level_threshold }}"
       when: high_level_alerts.stdout == ""
