@@ -1,5 +1,5 @@
 ---
-- name: Show full Wazuh log for December 17, 2024
+- name: Show Wazuh log with rule.level > 4
   hosts: all
   become: true
   gather_facts: no
@@ -12,6 +12,15 @@
         src: "{{ log_file }}"
       register: full_log
 
-    - name: Decode and display full log content
+    - name: Decode and split log lines
+      set_fact:
+        log_lines: "{{ full_log['content'] | b64decode | split('\n') }}"
+
+    - name: Parse JSON logs and filter rule.level > 4
+      set_fact:
+        filtered_logs: "{{ log_lines | map('from_json', default={}) | selectattr('rule.level', 'defined') | selectattr('rule.level', '>', 4) | list }}"
+
+    - name: Display filtered logs
       debug:
-        msg: "{{ full_log['content'] | b64decode }}"
+        msg: "Timestamp: {{ item.timestamp }}, Level: {{ item.rule.level }}, Description: {{ item.rule.description }}"
+      loop: "{{ filtered_logs }}"
