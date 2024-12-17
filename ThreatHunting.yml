@@ -23,8 +23,3 @@
       fail:
         msg: "Không có cảnh báo nào có level >= {{ alert_level_threshold }}"
       when: high_level_alerts.stdout == ""
-
-    - name: Hiển thị cảnh báo mức độ cao
-      debug:
-        msg: "Cảnh báo mức độ cao: {{ item.rule.description }} - Level: {{ item.rule.level }}"
-      loop: "{{ high_level_alerts.stdout_lines | map('from_json') | list }}"
