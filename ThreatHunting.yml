@@ -1,5 +1,5 @@
 ---
-- name: Extract Wazuh log alerts with level >= 5
+- name: Extract Wazuh alerts with level >= 5
   hosts: all
   become: true
   gather_facts: no
@@ -10,28 +10,27 @@
     - name: Read full log file content
       slurp:
         src: "{{ log_file }}"
-      register: full_log
+      register: raw_log
 
-    - name: Split, validate and filter logs by level >= 5
+    - name: Decode and split log lines
+      set_fact:
+        log_lines: "{{ raw_log['content'] | b64decode | split('\n') }}"
+
+    - name: Parse valid JSON logs and filter level >= 5
       set_fact:
         filtered_logs: >-
-          {{ full_log['content'] | b64decode | split('\n')
-             | select('search', '^{.*}$')   # Chỉ chọn các dòng JSON hợp lệ
-             | map('extract_json_safe')     # Parse từng dòng JSON an toàn
-             | selectattr('rule.level', '>=', 5)  # Lọc theo level >= 5
-             | list }}
+          {{ log_lines | map('extract_valid_json') | selectattr('rule.level', '>=', 5) | list }}
 
-    - name: Display valid logs with id, level, and description
+    - name: Display filtered logs (id, name, level)
       debug:
         msg: "ID: {{ item.rule.id }}, Level: {{ item.rule.level }}, Description: {{ item.rule.description }}"
       loop: "{{ filtered_logs }}"
 
-# Custom filter to safely parse JSON
-- name: Add custom filter for safe JSON parsing
-  filters:
-    extract_json_safe: |
-      def extract_json_safe(line):
+  # Custom filter to safely parse JSON
+  vars_filters:
+    extract_valid_json: |
+      def extract_valid_json(line):
           try:
               return json.loads(line)
           except:
-              return None
+              return {}
