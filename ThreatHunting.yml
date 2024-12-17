@@ -1,6 +1,6 @@
 ---
 - name: Show full Wazuh log with each log on a new line
-  hosts: all
+  hosts: 192.168.10.187
   become: true
   gather_facts: no
   vars:
@@ -12,9 +12,9 @@
         src: "{{ log_file }}"
       register: full_log
 
-    - name: Decode and split logs into lines
+    - name: Split and parse logs line by line
       set_fact:
-        log_lines: "{{ full_log['content'] | b64decode | from_json | list }}"
+        log_lines: "{{ full_log['content'] | b64decode | split('\n') | map('from_json') | list }}"
 
     - name: Display each log on a new line
       debug:
