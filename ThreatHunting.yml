@@ -1,0 +1,32 @@
+---
+- name: Fetch Wazuh alerts with rule level >= 5
+  hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    wazuh_api_url: "https://192.168.10.187:55000"   # Thay địa chỉ Wazuh API
+    wazuh_user: "admin"                       # Thay tên người dùng API
+    wazuh_password: "l5bQYq0Mni*n3e*3P?a2vDZ6wDw6d3Ex"               # Thay mật khẩu người dùng API
+    output_file: "./wazuh_alerts_level_5_or_higher.json"
+
+  tasks:
+    - name: Get Wazuh alerts with level >= 5
+      uri:
+        url: "{{ wazuh_api_url }}/alerts?level=5"
+        method: GET
+        user: "{{ wazuh_user }}"
+        password: "{{ wazuh_password }}"
+        force_basic_auth: yes
+        validate_certs: no
+        return_content: yes
+      register: wazuh_alerts
+
+    - name: Filter and save alerts to a file
+      copy:
+        content: "{{ wazuh_alerts.json | to_nice_json }}"
+        dest: "{{ output_file }}"
+      when: wazuh_alerts.json is defined
+
+    - name: Display fetched alerts
+      debug:
+        msg: "{{ wazuh_alerts.json | json_query('hits.hits[*].fields') }}"
