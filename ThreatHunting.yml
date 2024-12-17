@@ -12,21 +12,16 @@
         src: "{{ log_file }}"
       register: full_log
 
-    - name: Split and parse logs, filter by level >= 5
+    - name: Split and parse valid logs, filter by level >= 5
       set_fact:
-        filtered_logs: "{{ full_log['content'] | b64decode | split('\n') 
-                           | map('from_json') 
-                           | selectattr('rule.level', '>=', 5) 
-                           | list }}"
+        filtered_logs: >-
+          {{ full_log['content'] | b64decode | split('\n')
+             | select('match', '^{.*}$')          # Lọc các dòng có định dạng JSON
+             | map('from_json')                  # Chuyển thành JSON
+             | selectattr('rule.level', '>=', 5) # Lọc rule.level >= 5
+             | list }}
 
     - name: Extract id, name, and level
-      set_fact:
-        extracted_data: "{{ filtered_logs | map(attribute='rule') | map(attribute='id') | list }}"
-
-    - name: Display filtered logs
       debug:
-        msg: |
-          ID: {{ item.rule.id }}
-          Name: {{ item.rule.name }}
-          Level: {{ item.rule.level }}
+        msg: "ID: {{ item.rule.id }}, Level: {{ item.rule.level }}, Description: {{ item.rule.description }}"
       loop: "{{ filtered_logs }}"
