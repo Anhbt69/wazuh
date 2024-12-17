@@ -3,7 +3,7 @@
   hosts: 192.168.10.187
   become: yes
   vars:
-    alert_level: 9
+    alert_level: 3
     output_file: "/tmp/canh_bao_muc_do_cao.json"
     time_range: "24h"
     alert_threshold: 100
