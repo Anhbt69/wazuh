@@ -1,5 +1,5 @@
 ---
-- name: Show machine names from Wazuh log
+- name: Show full Wazuh log for December 17, 2024 with level > 4
   hosts: all
   become: true
   gather_facts: no
@@ -12,19 +12,10 @@
         src: "{{ log_file }}"
       register: full_log
 
-    - name: Decode and split log lines
+    - name: Decode and filter log content for level > 4
       set_fact:
-        log_lines: "{{ full_log['content'] | b64decode | split('\n') }}"
+        filtered_log: "{{ (full_log['content'] | b64decode | from_json) | selectattr('level', 'gt', 4) | list }}"
 
-    - name: Parse JSON logs and extract machine name
-      set_fact:
-        machine_names: "{{ log_lines |
-                           map('regex_replace', '^(.*)$', '\\1') |           # Ensure lines are treated as strings
-                           map('from_json', default={}) |                   # Parse to JSON (ignore errors)
-                           selectattr('agent.name', 'defined') |            # Check if 'agent.name' exists
-                           map(attribute='agent.name') | unique | list }}"  # Extract 'agent.name', remove duplicates
-
-    - name: Display machine names
+    - name: Display filtered log content
       debug:
-        msg: "Machine Name: {{ item }}"
-      loop: "{{ machine_names }}"
+        msg: "{{ filtered_log }}"
