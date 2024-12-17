@@ -3,7 +3,7 @@
   hosts: 192.168.10.187
   become: yes
   vars:
-    alert_level_threshold: 10
+    alert_level_threshold: 5
     wazuh_alerts_file: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-17.json"
 
   tasks:
