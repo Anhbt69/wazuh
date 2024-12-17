@@ -1,32 +1,28 @@
 ---
-- name: Fetch Wazuh alerts with rule level >= 5
-  hosts: 192.168.10.187
-  become: true
+- name: Filter Wazuh logs for alerts with level >= 5
+  hosts: localhost
+  become: yes
   gather_facts: no
   vars:
-    wazuh_api_url: "https://192.168.10.187:55000"   # Thay địa chỉ Wazuh API
-    wazuh_user: "admin"                       # Thay tên người dùng API
-    wazuh_password: "l5bQYq0Mni*n3e*3P?a2vDZ6wDw6d3Ex"               # Thay mật khẩu người dùng API
-    output_file: "./wazuh_alerts_level_5_or_higher.json"
+    log_file: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-17.json"
+    output_file: "./ThreatHungting_alerts_level_5.json"
 
   tasks:
-    - name: Get Wazuh alerts with level >= 5
-      uri:
-        url: "{{ wazuh_api_url }}/alerts?level=5"
-        method: GET
-        user: "{{ wazuh_user }}"
-        password: "{{ wazuh_password }}"
-        force_basic_auth: yes
-        validate_certs: no
-        return_content: yes
-      register: wazuh_alerts
+    - name: Read log file content
+      slurp:
+        src: "{{ log_file }}"
+      register: raw_log
 
-    - name: Filter and save alerts to a file
+    - name: Decode and filter alerts with rule.level >= 5
+      set_fact:
+        filtered_alerts: "{{ raw_log['content'] | b64decode | splitlines | map('from_json') | selectattr('rule.level', '>=', 5) | list }}"
+
+    - name: Save filtered alerts to a file
       copy:
-        content: "{{ wazuh_alerts.json | to_nice_json }}"
+        content: "{{ filtered_alerts | to_nice_json }}"
         dest: "{{ output_file }}"
-      when: wazuh_alerts.json is defined
+      when: filtered_alerts | length > 0
 
-    - name: Display fetched alerts
+    - name: Display filtered alerts
       debug:
-        msg: "{{ wazuh_alerts.json | json_query('hits.hits[*].fields') }}"
+        msg: "{{ filtered_alerts }}"
