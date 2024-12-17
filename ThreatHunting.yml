@@ -18,20 +18,9 @@
 
     - name: Parse and filter valid logs with level >= 5
       set_fact:
-        filtered_logs: >-
-          {{ log_lines | map('regex_replace', '^(.*)$', '\\1') | map('extract_valid_json') | selectattr('rule.level', '>=', 5) | list }}
+        filtered_logs: "{{ log_lines | map('from_json', default={}) | selectattr('rule.level', 'defined') | selectattr('rule.level', '>=', 5) | list }}"
 
-    - name: Display valid logs with id, level, and description
+    - name: Display logs with ID, Level, and Description
       debug:
         msg: "ID: {{ item.rule.id }}, Level: {{ item.rule.level }}, Description: {{ item.rule.description }}"
       loop: "{{ filtered_logs }}"
-  
-  # Python filter for safe JSON parsing
-  vars_plugins:
-    extract_valid_json: |
-      def extract_valid_json(line):
-          import json
-          try:
-              return json.loads(line)
-          except:
-              return {}
