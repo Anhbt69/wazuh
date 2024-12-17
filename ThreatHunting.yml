@@ -1,6 +1,6 @@
 ---
 - name: Filter Wazuh logs for alerts with level >= 5
-  hosts: localhost
+  hosts: 192.168.10.187
   become: yes
   gather_facts: no
   vars:
