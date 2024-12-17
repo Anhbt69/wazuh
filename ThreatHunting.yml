@@ -3,7 +3,7 @@
   hosts: 192.168.10.187
   become: yes
   vars:
-    alert_level_threshold: 5
+    alert_level_threshold: 3
     wazuh_alerts_file: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-17.json"
 
   tasks:
@@ -24,4 +24,7 @@
         msg: "Không có cảnh báo nào có level >= {{ alert_level_threshold }}"
       when: high_level_alerts.stdout == ""
 
-    
+    - name: Hiển thị cảnh báo mức độ cao
+      debug:
+        msg: "Cảnh báo mức độ cao: {{ item.rule.description }} - Level: {{ item.rule.level }}"
+      loop: "{{ high_level_alerts.stdout_lines | map('from_json') | list }}"
