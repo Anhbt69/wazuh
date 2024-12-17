@@ -1,31 +1,19 @@
 ---
-- name: Show full Wazuh log for December 17, 2024 with level > 4
-  hosts: all
-  become: true
-  gather_facts: no
+- name: Xử lý cảnh báo Wazuh mức độ cao qua SSH
+  hosts: 192.168.10.187
+  become: yes
   vars:
-    log_file: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-17.json"
+    alert_level_threshold: 10
+    wazuh_alerts_file: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-17.json"
 
   tasks:
-    - name: Read full log file content
-      slurp:
-        src: "{{ log_file }}"
-      register: full_log
+    - name: Đọc file cảnh báo Wazuh
+      shell: "tail -n 1000 {{ wazuh_alerts_file }} | jq -c 'select(.rule.level >= {{ alert_level_threshold }})'"
+      register: high_level_alerts
 
-    - name: Decode log content and split lines
-      set_fact:
-        decoded_logs: "{{ full_log['content'] | b64decode | split('\n') }}"
-
-    - name: Parse and filter logs with level > 4
-      set_fact:
-        filtered_logs: >-
-          {{ decoded_logs 
-             | select('search', '{')  # Chọn các dòng JSON hợp lệ
-             | map('from_json')       # Parse JSON
-             | selectattr('level', 'gt', 4) 
-             | list 
-          }}
-
-    - name: Display filtered log content
+    - name: Xử lý cảnh báo
       debug:
-        msg: "{{ filtered_logs }}"
+        msg: "Cảnh báo mức độ cao: {{ item.rule.description }} - Level: {{ item.rule.level }}"
+      loop: "{{ high_level_alerts.stdout_lines | map('from_json') | list }}"
+
+   
