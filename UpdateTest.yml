@@ -2,16 +2,28 @@
 - name: Update
   hosts: 192.168.10.187
   become: true
- 
+
   gather_facts: no
+
   tasks:
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600  # Cache valid trong 1 giờ
+
     - name: Ensure Wazuh is updated to the latest version
       apt:
         name: wazuh-manager
         state: latest
       register: update_result
+      ignore_errors: false  # Fail nếu task gặp lỗi
 
     - name: Notify if Wazuh was updated
       debug:
         msg: "Wazuh has been updated to the latest version."
       when: update_result.changed
+
+    - name: Notify if Wazuh is already up-to-date
+      debug:
+        msg: "Wazuh is already up-to-date."
+      when: not update_result.changed
