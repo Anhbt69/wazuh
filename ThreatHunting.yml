@@ -3,8 +3,8 @@
   hosts: 192.168.10.187
   become: yes
   vars:
-    alert_level_threshold: 3
-    wazuh_alerts_file: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-17.json"
+    alert_level_threshold: 6
+    wazuh_alerts_file: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-18.json"
 
   tasks:
     - name: Cài đặt jq nếu chưa có
