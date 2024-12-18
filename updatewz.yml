@@ -1,87 +1,209 @@
 ---
-- name: Update Wazuh Server
-  hosts: 192.168.10.187
-  become: yes
+- hosts: all
+  vars:
+    wazuh_manager_version: 3.12.2-1
+    wazuh_agent_version: 3.12.2-1
+    elastic_stack_version: 7.6.2
+    node_options: --max-old-space-size=2048
+    wazuh_app_url: https://packages.wazuh.com/wazuhapp/wazuhapp
   tasks:
+    - name: Wazuh manager and filebeat update
+      block:
+        #Stopping manager and API 
+        - name: ensure wazuh-manager is stopped
+          service:
+            name: wazuh-manager
+            state: stopped
+        - name: ensure wazuh-api is stopped
+          service:
+            name: wazuh-api
+            state: stopped
+        #Upgrading Wazuh manager and API
+        - name: Debian/Ubuntu | Install wazuh-manager
+          apt:
+            name:
+              - "wazuh-manager={{ wazuh_manager_version }}"
+            state: present
+            cache_valid_time: 3600
+            install_recommends: false
+          register: wazuh_manager_main_packages_installed
+          until: wazuh_manager_main_packages_installed is succeeded
+          when:
+            - ansible_os_family|lower == "debian"
 
-    # Step 1: Remove existing conflicting Wazuh repository if it exists
-    - name: Remove old Wazuh repository list
-      file:
-        path: /etc/apt/sources.list.d/wazuh.list
-        state: absent
-      when: ansible_os_family == "Debian"
+        - name: Debian/Ubuntu | Install wazuh-api
+          apt:
+            name:
+              - "wazuh-api={{ wazuh_manager_version }}"
+            state: present
+            cache_valid_time: 3600
+            install_recommends: false
+          register: wazuh_manager_main_packages_installed
+          until: wazuh_manager_main_packages_installed is succeeded
+          when:
+            - ansible_os_family|lower == "debian"
 
-    - name: Remove Wazuh repository cache (RedHat-based systems)
-      command: yum-config-manager --disable wazuh
-      ignore_errors: yes
-      when: ansible_os_family == "RedHat"
+        - name: CentOS/RedHat/Amazon | Install wazuh-manager
+          package:
+            name: "wazuh-manager-{{ wazuh_manager_version }}"
+            state: present
+          register: wazuh_manager_main_packages_installed
+          until: wazuh_manager_main_packages_installed is succeeded
+          when:
+            - ansible_os_family|lower == "redhat"
+        - name: CentOS/RedHat/Amazon | Install wazuh-api
+          package:
+            name: "wazuh-api-{{ wazuh_manager_version }}"
+            state: present
+          register: wazuh_api_main_packages_installed
+          until: wazuh_api_main_packages_installed is succeeded
+          when:
+            - ansible_os_family|lower == "redhat"
+        #Restarting Wazuh manager and API
+        - name: restart manager
+          service:
+            name: wazuh-manager
+            state: restarted
+        - name: restart api
+          service:
+            name: wazuh-api
+            state: restarted
 
-    # Step 2: Add Wazuh repository for Debian/Ubuntu
-    - name: Add Wazuh GPG key for Debian/Ubuntu
-      command: >
-        curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor | sudo tee /usr/share/keyrings/wazuh.gpg > /dev/null
-      when: ansible_os_family == "Debian"
+        # Filebeat
+        - name: ensure filebeat is stopped
+          service:
+            name: filebeat
+            state: stopped
 
-    - name: Add Wazuh repository for Debian/Ubuntu
-      command: >
-        echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" | sudo tee /etc/apt/sources.list.d/wazuh.list
-      when: ansible_os_family == "Debian"
+        - name: CentOS/RedHat |  Install Filebeat.
+          package: name=filebeat-{{ elastic_stack_version }} state=present
+          register: filebeat_installing_package
+          until: filebeat_installing_package is succeeded
+          when:
+            - ansible_os_family|lower == "redhat"
+        - name: Debian/Ubuntu | Install Filebeat.
+          apt:
+            name: filebeat={{ elastic_stack_version }}
+            state: present
+            cache_valid_time: 3600
+          register: filebeat_installing_package_debian
+          until: filebeat_installing_package_debian is succeeded
+          when:
+            - ansible_os_family|lower == "debian"
 
-    # Step 3: Add Wazuh repository for RedHat/CentOS
-    - name: Add Wazuh repository for RedHat/CentOS
-      yum_repository:
-        name: wazuh
-        description: "Wazuh repository"
-        baseurl: https://packages.wazuh.com/4.x/rpm/
-        enabled: yes
-        gpgcheck: yes
-        gpgkey: https://packages.wazuh.com/key/GPG-KEY-WAZUH
-        state: present
-      when: ansible_os_family == "RedHat"
+        - name: restart filebeat
+          service:
+            name: filebeat
+            state: restarted
+      when:
+        - inventory_hostname in groups['manager']
 
-    # Step 4: Update package cache
-    - name: Update package cache for Debian/Ubuntu
-      apt:
-        update_cache: yes
-      when: ansible_os_family == "Debian"
+    - name: Wazuh agent update
+      block:
+        #Stopping agent 
+        - name: ensure wazuh-agent is stopped
+          service:
+            name: wazuh-agent
+            state: stopped
 
-    - name: Update package cache for RedHat/CentOS
-      yum:
-        update_cache: yes
-      when: ansible_os_family == "RedHat"
+        - name: Linux Debian | Install wazuh-agent
+          apt:
+            name: "wazuh-agent={{ wazuh_agent_version }}-1"
+            state: present
+            cache_valid_time: 3600
+          when:
+            - ansible_os_family|lower == "debian"
 
-    # Step 5: Upgrade Wazuh Manager to the latest version
-    - name: Upgrade Wazuh Manager on Debian/Ubuntu
-      apt:
-        name: wazuh-manager
-        state: latest
-      when: ansible_os_family == "Debian"
+        - name: Linux CentOS/RedHat | Install wazuh-agent
+          package:
+            name: wazuh-agent-{{ wazuh_agent_version }}
+            state: present
+          async: 90
+          poll: 30
+          when:
+            - ansible_os_family|lower == "redhat"
 
-    - name: Upgrade Wazuh Manager on RedHat/CentOS
-      yum:
-        name: wazuh-manager
-        state: latest
-      when: ansible_os_family == "RedHat"
+        - name: restart agent
+          service:
+            name: wazuh-agent
+            state: restarted
+      when:
+        - inventory_hostname in groups['agent']
 
-    # Step 6: Check Wazuh Manager version after the upgrade
-    - name: Get the current Wazuh Manager version
-      command: wazuh-manager -v
-      register: wazuh_version
-      changed_when: false
+    - name: Elasticsearch update
+      block:
+        - name: ensure elasticsearch is stopped
+          service:
+            name: elasticsearch
+            state: stopped
 
-    - name: Display the current Wazuh Manager version
-      debug:
-        msg: "Wazuh Manager version: {{ wazuh_version.stdout }}"
+        - name: Debian/Ubuntu | Install Elasticsarch
+          apt:
+            name: "elasticsearch={{ elastic_stack_version }}"
+            state: present
+            cache_valid_time: 3600
+          register: elasticsearch_main_packages_installed
+          until: elasticsearch_main_packages_installed is succeeded
+          when:
+            - ansible_os_family|lower == "debian"
+        - name: RedHat/CentOS/Fedora | Install Elasticsarch
+          package: name=elasticsearch-{{ elastic_stack_version }} state=present
+          when:
+            - ansible_os_family|lower == "redhat"
+        - name: restart elasticsearch
+          service:
+            name: elasticsearch
+            state: restarted
+      when:
+        - inventory_hostname in groups['elasticsearch']
 
-    # Step 7: Restart Wazuh Manager service
-    - name: Restart Wazuh Manager service
-      systemd:
-        name: wazuh-manager
-        state: restarted
+    - name: Kibana update
+      block:
+        - name: ensure kibana is stopped
+          service:
+            name: kibana
+            state: stopped
 
-    # Step 8: Ensure Wazuh Manager service is running
-    - name: Ensure Wazuh Manager service is running and enabled
-      systemd:
-        name: wazuh-manager
-        state: started
-        enabled: yes
+        - name: Debian/Ubuntu | Install Kibana
+          apt:
+            name: "kibana={{ elastic_stack_version }}"
+            state: present
+            cache_valid_time: 3600
+          register: installing_kibana_package
+          until: installing_kibana_package is succeeded
+          when:
+            - ansible_os_family|lower == "debian"
+      
+        - name: RedHat/CentOS/Fedora | Install Kibana
+          package: name=kibana-{{ elastic_stack_version }} state=present
+          register: installing_kibana_package
+          until: installing_kibana_package is succeeded
+          when:
+            - ansible_os_family|lower == "redhat"
+
+        - name: Install Wazuh Plugin (can take a while)
+          shell: >-
+            NODE_OPTIONS="{{ node_options }}" /usr/share/kibana/bin/kibana-plugin install
+            {{ wazuh_app_url }}-{{ wazuh_manager_version }}_{{ elastic_stack_version }}.zip
+          args:
+            executable: /bin/bash
+            creates: /usr/share/kibana/plugins/wazuh/package.json
+            chdir: /usr/share/kibana
+          become: yes
+          become_user: kibana
+          notify: restart kibana
+
+        - name: Kibana optimization (can take a while)
+          shell: NODE_OPTIONS="{{ node_options }}" /usr/share/kibana/bin/kibana --optimize
+          args:
+            executable: /bin/bash
+          become: yes
+          become_user: kibana
+          changed_when: false
+
+        - name: restart kibana
+          service:
+            name: kibana
+            state: restarted
+      when:
+        - inventory_hostname in groups['kibana']
