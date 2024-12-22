@@ -1,22 +1,19 @@
 ---
-- name: Check Wazuh Version
+- name: Check Wazuh Manager Version
   hosts: all
   become: yes
   tasks:
-    - name: Get Wazuh Manager version
-      command: wazuh-manager -v
-      register: wazuh_manager_version
-      changed_when: false
+    - name: Check if Wazuh Manager is installed
+      shell: /var/ossec/bin/wazuh-control info
+      register: wazuh_version
+      ignore_errors: yes
 
-    - name: Get Wazuh Agent version
-      command: wazuh-agent -v
-      register: wazuh_agent_version
-      changed_when: false
-
-    - name: Show Wazuh Manager version
+    - name: Display Wazuh Manager version
       debug:
-        msg: "Wazuh Manager version: {{ wazuh_manager_version.stdout }}"
-
-    - name: Show Wazuh Agent version
-      debug:
-        msg: "Wazuh Agent version: {{ wazuh_agent_version.stdout }}"
+        msg: >
+          {% if wazuh_version.stdout %}
+          Wazuh Manager is installed. Current version:
+          {{ wazuh_version.stdout }}
+          {% else %}
+          Wazuh Manager is not installed or command not found.
+          {% endif %}
