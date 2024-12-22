@@ -10,3 +10,4 @@
     - name: Display Wazuh log output
       debug:
         msg: "{{ wazuh_log_output.stdout }}"
+      no_log: false 
