@@ -1,16 +1,20 @@
 ---
-- name: Update Wazuh Manager
-  hosts: all
-  become: yes
+- name: Update and Backup Wazuh
+  hosts: 192.168.10.187
+  become: true
+ 
+  gather_facts: no
   tasks:
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-
-    - name: Install or update Wazuh Manager
+    - name: Ensure Wazuh is updated to the latest version
       apt:
         name: wazuh-manager
         state: latest
+      register: update_result
+
+    - name: Notify if Wazuh was updated
+      debug:
+        msg: "Wazuh has been updated to the latest version."
+      when: update_result.changed
 
     - name: Restart Wazuh Manager service
       service:
