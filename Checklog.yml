@@ -4,7 +4,7 @@
   become: yes
   tasks:
     - name: Show recent Wazuh log entries
-      command: tail -n 20 /var/ossec/logs/ossec.log
+      command: tail -n 50 /var/ossec/logs/ossec.log
       register: wazuh_log_output
 
     - name: Display Wazuh log output
