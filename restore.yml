@@ -3,7 +3,7 @@
   hosts: all
   become: yes
   vars:
-    backup_dir: "/var/backup/wazuh_config"
+    backup_dir: "/var/ossec/backup/wazuh_config"
     restore_timestamp: "20241223T074449244411"
     backup_file: "{{ backup_dir }}/wazuh_config_{{ restore_timestamp }}.tar.gz"
 
