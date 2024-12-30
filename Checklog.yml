@@ -7,7 +7,7 @@
       command: tail -n 50 /var/ossec/logs/ossec.log
       register: wazuh_log_output
 
-    - name: Display Wazuh log output
+    - name: Display each line of Wazuh log output
       debug:
-        msg: "{{ wazuh_log_output.stdout }}"
-      no_log: false
+        msg: "{{ item }}"
+      loop: "{{ wazuh_log_output.stdout_lines }}"
