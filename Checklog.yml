@@ -3,11 +3,11 @@
   hosts: all
   become: yes
   tasks:
-    - name: Show recent Wazuh log entries
-      command: cat /var/ossec/logs/ossec.log
+    - name: Show the last 50 Wazuh log entries
+      command: tail -n 50 /var/ossec/logs/ossec.log
       register: wazuh_log_output
 
     - name: Display Wazuh log output
       debug:
         msg: "{{ wazuh_log_output.stdout }}"
-      no_log: false 
+      no_log: false
