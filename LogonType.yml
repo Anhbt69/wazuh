@@ -3,7 +3,7 @@
   hosts: all
   become: yes
   vars:
-    alert_file: "/var/ossec/logs/alerts/alerts.json"
+    alert_file: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-31.json"
   tasks:
     - name: Search for direct logins with logonType >= 2
       shell: "grep -E '\"logonType\": [2-9]' \"{{ alert_file }}\""
