@@ -1,0 +1,30 @@
+---
+- name: Detect Direct Logins (logonType >= 2) in Wazuh Logs
+  hosts: all
+  become: yes
+  vars:
+    alert_file: "/var/ossec/logs/alerts/alerts.json"
+  tasks:
+    - name: Search for direct logins with logonType >= 2
+      shell: "grep -E '\"logonType\": [2-9]' \"{{ alert_file }}\""
+      register: direct_logins
+      failed_when: direct_logins.rc != 0 and direct_logins.rc != 1
+      ignore_errors: yes
+
+    - name: Display detected direct logins in AWX output
+      debug:
+        msg: >
+          Detected direct logins (logonType >= 2):
+          {{ direct_logins.stdout }}
+      when: direct_logins.stdout is defined and direct_logins.stdout != ""
+
+    - name: Save detected direct logins to a log file
+      copy:
+        content: "{{ direct_logins.stdout }}"
+        dest: "/tmp/direct_logins.log"
+      when: direct_logins.stdout is defined and direct_logins.stdout != ""
+
+    - name: Notify if no direct logins are found
+      debug:
+        msg: "No direct logins detected (logonType >= 2)."
+      when: direct_logins.stdout is not defined or direct_logins.stdout == ""
