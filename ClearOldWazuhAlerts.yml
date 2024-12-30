@@ -5,7 +5,7 @@
   tasks:
     - name: Delete Alert
       file:
-        path: "/var/ossec/logs/alerts/2024/Dec/ossec-alerts-18.log"
+        path: "/var/ossec/logs/alerts/2024/Aug/ossec-alerts-24.json"
         state: absent
       register: deleted_file
 
