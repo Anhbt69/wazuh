@@ -1,24 +1,29 @@
 ---
-- name: Wazuh Privilege Escalation Detection
+- name: Detect Privilege Escalation and Suspicious Logins in Wazuh Logs
   hosts: all
   become: yes
   vars:
-    alert_file: "/var/ossec/logs/alerts/alerts.json"
+    alert_file: "/var/ossec/logs/alerts/alerts.json" 
   tasks:
-    - name: Detect suspicious logins (Valid Accounts, Privilege Escalation)
-      command: grep -E '"rule.id": (60122|60204|.*)' {{ alert_file }}
+    - name: Search for suspicious activities in Wazuh logs
+      shell: grep -E '"rule.id": (60122|60204)' {{ alert_file }}
       register: suspicious_alerts
       ignore_errors: yes
 
-    - name: Display suspicious activities directly in AWX output
+    - name: Display suspicious activities in AWX output
       debug:
         msg: >
           Detected suspicious activities:
           {{ suspicious_alerts.stdout }}
-      when: suspicious_alerts.stdout != ""
+      when: suspicious_alerts.stdout is defined and suspicious_alerts.stdout != ""
 
-    - name: Save suspicious activities to file (for logging purposes)
+    - name: Save suspicious activities to a log file
       copy:
         content: "{{ suspicious_alerts.stdout }}"
-        dest: "/tmp/suspicious_alerts.log"
-      when: suspicious_alerts.stdout != ""
+        dest: "/tmp/suspicious_activities.log"
+      when: suspicious_alerts.stdout is defined and suspicious_alerts.stdout != ""
+
+    - name: Notify if no suspicious activities are found
+      debug:
+        msg: "No suspicious activities detected."
+      when: suspicious_alerts.stdout is not defined or suspicious_alerts.stdout == ""
