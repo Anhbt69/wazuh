@@ -1,6 +1,6 @@
 ---
 - name: Update Wazuh Dashboard to match API version
-  hosts: all
+  hosts: wazuh_server
   become: yes
   tasks:
     - name: Check current Wazuh Dashboard version
@@ -13,10 +13,9 @@
         msg: "Current Wazuh Dashboard Version: {{ current_dashboard_version.stdout }}"
 
     - name: Download the latest Wazuh Dashboard package
-      shell: |
-        wget -O /tmp/wazuh-dashboard.deb https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-dashboard/wazuh-dashboard_4.9.0_amd64.deb
-      args:
-        warn: false
+      get_url:
+        url: "https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-dashboard/wazuh-dashboard_4.9.0_amd64.deb"
+        dest: "/tmp/wazuh-dashboard.deb"
 
     - name: Install the downloaded Wazuh Dashboard package
       apt:
