@@ -1,0 +1,24 @@
+---
+- name: Wazuh Privilege Escalation Detection
+  hosts: all
+  become: yes
+  vars:
+    alert_file: "/var/ossec/logs/alerts/alerts.json"
+  tasks:
+    - name: Detect suspicious logins (Valid Accounts, Privilege Escalation)
+      command: grep -E '"rule.id": (60122|60204|.*)' {{ alert_file }}
+      register: suspicious_alerts
+      ignore_errors: yes
+
+    - name: Display suspicious activities directly in AWX output
+      debug:
+        msg: >
+          Detected suspicious activities:
+          {{ suspicious_alerts.stdout }}
+      when: suspicious_alerts.stdout != ""
+
+    - name: Save suspicious activities to file (for logging purposes)
+      copy:
+        content: "{{ suspicious_alerts.stdout }}"
+        dest: "/tmp/suspicious_alerts.log"
+      when: suspicious_alerts.stdout != ""
