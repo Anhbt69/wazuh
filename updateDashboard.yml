@@ -3,49 +3,36 @@
   hosts: all
   become: yes
   tasks:
-    # Task 1: Kiểm tra xem Wazuh Dashboard đã được cài đặt chưa
-    - name: Check if Wazuh Dashboard is installed
-      shell: dpkg-query --showformat='${Status}' -W wazuh-dashboard
-      register: wazuh_dashboard_check
+    - name: Check current Wazuh Dashboard version
+      shell: "dpkg -l | grep wazuh-dashboard"
+      register: current_dashboard_version
       ignore_errors: yes
 
-    - name: Display Wazuh Dashboard installation status
+    - name: Display current Wazuh Dashboard version
       debug:
-        msg: >
-          {% if wazuh_dashboard_check.stdout == "install ok installed" %}
-          Wazuh Dashboard is installed.
-          {% else %}
-          Wazuh Dashboard is not installed. It will be installed now.
-          {% endif %}
+        msg: "Current Wazuh Dashboard Version: {{ current_dashboard_version.stdout }}"
 
-    # Task 2: Cập nhật cache APT
-    - name: Update apt cache
+    - name: Download the latest Wazuh Dashboard package
+      shell: |
+        wget -O /tmp/wazuh-dashboard.deb https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-dashboard/wazuh-dashboard_4.9.0_amd64.deb
+      args:
+        warn: false
+
+    - name: Install the downloaded Wazuh Dashboard package
       apt:
-        update_cache: yes
+        deb: /tmp/wazuh-dashboard.deb
+        state: present
 
-    # Task 3: Cài đặt hoặc cập nhật Wazuh Dashboard lên phiên bản mới nhất
-    - name: Install or update Wazuh Dashboard
-      apt:
-        name: wazuh-dashboard
-        state: latest
-
-    # Task 4: Khởi động lại dịch vụ Wazuh Dashboard
     - name: Restart Wazuh Dashboard service
-      service:
+      systemd:
         name: wazuh-dashboard
         state: restarted
+        enabled: yes
 
-    # Task 5: Kiểm tra phiên bản Dashboard sau cập nhật
-    - name: Check Wazuh Dashboard version
-      shell: wazuh-dashboard version
-      register: wazuh_dashboard_version
-      ignore_errors: yes
+    - name: Verify updated Wazuh Dashboard version
+      shell: "dpkg -l | grep wazuh-dashboard"
+      register: updated_dashboard_version
 
-    - name: Display Wazuh Dashboard version
+    - name: Display updated Wazuh Dashboard version
       debug:
-        msg: >
-          {% if wazuh_dashboard_version.stdout %}
-          Wazuh Dashboard has been updated to version: {{ wazuh_dashboard_version.stdout }}.
-          {% else %}
-          Unable to retrieve Wazuh Dashboard version. Please check manually.
-          {% endif %}
+        msg: "Updated Wazuh Dashboard Version: {{ updated_dashboard_version.stdout }}"
