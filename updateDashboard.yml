@@ -1,6 +1,6 @@
 ---
 - name: Update Wazuh Dashboard to match API version
-  hosts: wazuh_server
+  hosts: all
   become: yes
   tasks:
     - name: Check current Wazuh Dashboard version
