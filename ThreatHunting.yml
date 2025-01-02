@@ -12,7 +12,7 @@
         name: jq
         state: present
 
-    - name: Serch Alert
+    - name: Search Alert
       shell: |
         tail -n 1000 {{ wazuh_alerts_file }} | \
         grep '^{.*}$' | jq -c 'select(.rule.level != null and .rule.level >= {{ alert_level_threshold }})'
