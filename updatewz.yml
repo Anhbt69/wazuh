@@ -1,6 +1,6 @@
 ---
 - name: Update and Backup Wazuh
-  hosts: 192.168.10.187
+  hosts: all
   become: true
  
   gather_facts: no
