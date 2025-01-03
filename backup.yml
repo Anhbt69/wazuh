@@ -16,7 +16,7 @@
 
     - name: Create timestamp for backup
       set_fact:
-        timestamp: "{{ ansible_date_time }}"
+        timestamp: "{{ ansible_date_time.iso8601_basic }}"
 
     - name: Backup Wazuh configuration files
       command: "tar -czf {{ backup_dir }}/wazuh_config_{{ timestamp }}.tar.gz /var/ossec/etc"
