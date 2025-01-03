@@ -1,5 +1,5 @@
 ---
-- name: Update and Backup Wazuh
+- name: Update Wazuh
   hosts: all
   become: true
   gather_facts: no
