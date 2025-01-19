@@ -4,7 +4,7 @@
   become: yes
   vars:
     alert_level_threshold: 9
-    wazuh_alerts_file: "/var/ossec/logs/alerts/2025/Jan/ossec-alerts-20.json"
+    wazuh_alerts_file: "/var/ossec/logs/alerts/2025/Jan/ossec-alerts-19.json"
 
   tasks:
     - name: Install jq if not have
